@@ -7,7 +7,6 @@ namespace BEAR\Dev\Http;
 use BEAR\Resource\ResourceInterface;
 use Ray\Di\InjectorInterface;
 use ReflectionClass;
-
 use function dirname;
 use function register_shutdown_function;
 

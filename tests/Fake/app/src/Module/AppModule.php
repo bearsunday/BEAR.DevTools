@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace MyVendor\MyProject\Module;
 
-use BEAR\Dotenv\Dotenv;
-use BEAR\Package\AbstractAppModule;
 use BEAR\Package\PackageModule;
 
+use MyVendor\MyProject\Resource\Page\Aop;
+use Ray\Aop\NullInterceptor;
+use Ray\Di\AbstractModule;
 use function dirname;
 
-class AppModule extends AbstractAppModule
+class AppModule extends AbstractModule
 {
     protected function configure(): void
     {
-        (new Dotenv())->load(dirname(__DIR__, 2));
+        $this->bindInterceptor(
+            $this->matcher->subclassesOf(Aop::class),
+            $this->matcher->startsWith('on'),
+            [NullInterceptor::class]
+        );
         $this->install(new PackageModule());
     }
 }

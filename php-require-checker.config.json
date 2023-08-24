@@ -1,0 +1,9 @@
+{
+  "symbol-whitelist": [
+    "null", "true", "false",
+    "static", "self", "parent",
+    "array", "string", "int", "float", "bool", "iterable", "callable", "void", "object",
+    "json_decode", "json_encode", "JSON_PRETTY_PRINT", "JSON_THROW_ON_ERROR", "JSON_UNESCAPED_SLASHES", "JSON_UNESCAPED_UNICODE",
+    "xhprof_disable", "xhprof_enable", "XHPROF_FLAGS_CPU", "XHPROF_FLAGS_MEMORY", "XHPROF_FLAGS_NO_BUILTINS"
+  ]
+}

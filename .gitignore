@@ -9,3 +9,7 @@
 tests/Http/log/HttpResourceClientTest.log
 coverage.xml
 tests/Http/log/app.log
+.idea
+!.idea/
+.idea/*
+!.idea/runConfigurations/

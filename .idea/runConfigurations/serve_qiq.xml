@@ -1,0 +1,6 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="serve-qiq" type="PhpBuiltInWebServerConfigurationType" factoryName="PHP Built-in Web Server" document_root="$PROJECT_DIR$/tests/Fake/app/public" port="8080">
+    <CommandLine parameters="-dzend_extension=xdebug.so -dxdebug.mode=debug" />
+    <method v="2" />
+  </configuration>
+</component>

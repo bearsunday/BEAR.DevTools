@@ -9,19 +9,22 @@
         }
     ],
     "require": {
-        "php": "^7.3 || ^8.0",
-        "ext-json": "*",
+        "php": "^8.0",
         "ext-filter": "*",
         "aura/sql": "^3 || ^4 || ^5",
+        "bear/app-meta": "^1.8",
         "bear/resource": "^1.17",
+        "koriym/php-server": "^1.0",
         "psr/log": "^1 || ^2 || ^3",
-        "ray/di": "^2.14",
-        "symfony/process": "^5.2.7"
+        "ray/aop": "^2.13",
+        "ray/di": "^2.14"
     },
     "require-dev": {
         "bamarni/composer-bin-plugin": "^1.4",
         "bear/package": "^1.10",
-        "phpunit/phpunit": "^9.5",
+        "bear/qiq-module": "^1.0",
+        "madapaja/twig-module": "^2.4",
+        "phpunit/phpunit": "^9.5.27",
         "ray/aura-sql-module": "^1.10"
     },
     "autoload": {
@@ -32,7 +35,10 @@
     "autoload-dev": {
         "psr-4": {
             "BEAR\\Dev\\": [
-                "tests/"
+                "tests/Fake"
+            ],
+            "MyVendor\\MyProject\\": [
+                "tests/Fake/app/src"
             ]
         }
     },
@@ -56,5 +62,24 @@
         "allow-plugins": {
             "bamarni/composer-bin-plugin": true
         }
+    },
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "name": "longxinh/xhprof",
+                "version": "2.3.9",
+                "dist": {
+                    "url": "https://github.com/longxinH/xhprof/archive/refs/tags/v2.3.9.zip",
+                    "type": "zip"
+                },
+                "autoload": {
+                    "classmap": ["/xhprof_lib/utils/"]
+                }
+            }
+        }
+    ],
+    "suggest": {
+        "ext-xhprof": "XHprof hierarchical profiler"
     }
 }

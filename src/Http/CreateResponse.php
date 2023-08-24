@@ -77,7 +77,7 @@ final class CreateResponse
             $keyedHeader[$matched[1]] = $matched[2];
         }
 
-        return $keyedHeader; // @phpstan-ignore-line
+        return $keyedHeader;
     }
 
     /**

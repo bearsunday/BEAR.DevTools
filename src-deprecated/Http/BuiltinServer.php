@@ -6,7 +6,6 @@ namespace BEAR\Dev\Http;
 
 use RuntimeException;
 use Symfony\Component\Process\Process;
-
 use function error_log;
 use function is_int;
 use function register_shutdown_function;
@@ -14,10 +13,10 @@ use function sleep;
 use function sprintf;
 use function strpos;
 use function version_compare;
-
 use const PHP_BINARY;
 use const PHP_VERSION;
 
+/** @deprecated User koriym/php-server PhpServer instead */
 final class BuiltinServer
 {
     /**
@@ -67,13 +66,12 @@ final class BuiltinServer
         });
     }
 
+    /** @codeCoverageIgnore */
     public function stop(): void
     {
-        // @codeCoverageIgnoreStart
         $exitCode = $this->process->stop();
         if ($exitCode !== 143) {
             throw new RuntimeException(sprintf('code:%s msg:%s', (string) $exitCode, $this->process->getErrorOutput()));
         }
-        // @codeCoverageIgnoreEnd
     }
 }

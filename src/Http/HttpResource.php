@@ -9,6 +9,7 @@ use BEAR\Resource\RequestInterface;
 use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
 use BEAR\Resource\Uri as ResourceUri;
+use Koriym\PhpServer\PhpServer;
 use LogicException;
 
 use function exec;
@@ -32,7 +33,7 @@ final class HttpResource implements ResourceInterface
     /** @var string */
     private $baseUri;
 
-    /** @var BuiltinServer */
+    /** @var PhpServer */
     private static $server;
 
     /** @var QueryMerger */
@@ -62,7 +63,7 @@ final class HttpResource implements ResourceInterface
             return;
         }
 
-        self::$server = new BuiltinServer($host, $index);
+        self::$server = new PhpServer($host, $index);
         self::$server->start();
         $started[] = $id;
     }
