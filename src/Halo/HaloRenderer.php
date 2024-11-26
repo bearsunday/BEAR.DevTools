@@ -104,8 +104,8 @@ final class HaloRenderer implements RenderInterface
 
         $bootstrapCss = '<link href="https://koriym.github.io/BEAR.Package/assets/css/bootstrap.bear.css" rel="stylesheet">' . PHP_EOL .
             '<link href="https://koriym.github.io/BEAR.Package/assets/css/bear.dev.css" rel="stylesheet">' . PHP_EOL;
-        $bootstrapCss .= strpos($body, 'glyphicons.css') ? '' : '<link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css" rel="stylesheet">' . PHP_EOL;
-        $tabJs = strpos($body, '/assets/js/bootstrap-tab.js') ? '' : '<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap-tab.js"></script>' . PHP_EOL;
+        $bootstrapCss .= is_int(strpos($body, 'glyphicons.css')) ? '' : '<link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css" rel="stylesheet">' . PHP_EOL;
+        $tabJs = is_int(strpos($body, '/assets/js/bootstrap-tab.js')) ? '' : '<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap-tab.js"></script>' . PHP_EOL;
         $bootstrapJs = '<link href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/united/bootstrap.min.css" rel="stylesheet">';
         $toolLoad = <<<EOT
 <!-- BEAR.Sunday dev tools -->
