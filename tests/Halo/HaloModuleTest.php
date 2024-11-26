@@ -28,9 +28,7 @@ class HaloModuleTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider pageProvider
-     */
+    /** @dataProvider pageProvider */
     public function testModule(string $uri): void
     {
         $ro = $this->resource->get($uri);

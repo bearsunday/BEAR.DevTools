@@ -91,9 +91,7 @@ final class HttpResource implements ResourceInterface
         throw new LogicException();
     }
 
-    /**
-     * @codeCoverageIgnore
-     */
+    /** @codeCoverageIgnore */
     public function object(ResourceObject $ro): RequestInterface
     {
         unset($ro);
@@ -181,9 +179,7 @@ final class HttpResource implements ResourceInterface
         throw new LogicException();
     }
 
-    /**
-     * @param array<string, mixed> $query
-     */
+    /** @param array<string, mixed> $query */
     private function safeRequest(string $path, array $query): ResourceObject
     {
         $uri = ($this->queryMerger)($path, $query);
@@ -194,9 +190,7 @@ final class HttpResource implements ResourceInterface
         return $this->request($curl, 'get', $url);
     }
 
-    /**
-     * @param array<mixed> $query
-     */
+    /** @param array<mixed> $query */
     private function unsafeRequest(string $method, string $path, array $query): ResourceObject
     {
         $uri = ($this->queryMerger)($path, $query);
@@ -208,9 +202,7 @@ final class HttpResource implements ResourceInterface
         return $this->request($curl, $method, $url);
     }
 
-    /**
-     * @param array<string> $output
-     */
+    /** @param array<string> $output */
     public function log(array $output, string $curl): void
     {
         $responseLog = implode(PHP_EOL, $output);

@@ -28,9 +28,12 @@ final class TemplateLocator
      */
     public function __construct(
         private AbstractAppMeta $meta,
-        #[TwigPaths] private array $twigPaths = [],
-        #[Named('qiq_paths')] private array $qiqPaths = [],
-        #[Named('qiq_extension')] private string $qiqExt = '',
+        #[TwigPaths]
+        private array $twigPaths = [],
+        #[Named('qiq_paths')]
+        private array $qiqPaths = [],
+        #[Named('qiq_extension')]
+        private string $qiqExt = '',
     ) {
     }
 
@@ -47,9 +50,7 @@ final class TemplateLocator
         return '';
     }
 
-    /**
-     * @param array<string> $paths
-     */
+    /** @param array<string> $paths */
     private function getTemplatePath(ResourceObject $ro, array $paths, string $ext): string
     {
         foreach ($paths as $path) {

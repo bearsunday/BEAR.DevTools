@@ -16,6 +16,7 @@ final class HaloModule extends AbstractModule
     public function __construct(AbstractModule $module)
     {
         $module->rename(RenderInterface::class, 'original');
+
         parent::__construct($module);
     }
 

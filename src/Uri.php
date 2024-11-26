@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BEAR\Dev;
 
+/** @psalm-immutable */
 final class Uri
 {
     /** @var string  */
@@ -12,9 +13,7 @@ final class Uri
     /** @var array<string, mixed> */
     public $query;
 
-    /**
-     * @param  array<string, mixed> $query
-     */
+    /** @param  array<string, mixed> $query */
     public function __construct(string $path, array $query)
     {
         $this->path = $path;

@@ -24,9 +24,7 @@ use const PHP_EOL;
  */
 final class CreateResponse
 {
-    /**
-     * @param array<string> $output
-     */
+    /** @param array<string> $output */
     public function __invoke(Uri $uri, array $output): ResourceObject
     {
         $headers = $body = [];
@@ -80,9 +78,7 @@ final class CreateResponse
         return $keyedHeader;
     }
 
-    /**
-     * @param array<string> $body
-     */
+    /** @param array<string> $body */
     private function getJsonView(array $body): string
     {
         array_pop($body);

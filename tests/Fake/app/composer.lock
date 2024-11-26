@@ -1485,41 +1485,44 @@
         },
         {
             "name": "madapaja/twig-module",
-            "version": "2.5.1",
+            "version": "2.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/madapaja/Madapaja.TwigModule.git",
-                "reference": "1c6cfbd533764ce3c4b03945a9aa9f8a5ddb3dd4"
+                "reference": "e677a8509954b1e548ab5641018fbd1ff8e9fce3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/madapaja/Madapaja.TwigModule/zipball/1c6cfbd533764ce3c4b03945a9aa9f8a5ddb3dd4",
-                "reference": "1c6cfbd533764ce3c4b03945a9aa9f8a5ddb3dd4",
+                "url": "https://api.github.com/repos/madapaja/Madapaja.TwigModule/zipball/e677a8509954b1e548ab5641018fbd1ff8e9fce3",
+                "reference": "e677a8509954b1e548ab5641018fbd1ff8e9fce3",
                 "shasum": ""
             },
             "require": {
                 "bear/app-meta": "^1.8",
-                "bear/resource": "^1.20",
-                "bear/sunday": "^1.2",
-                "mobiledetect/mobiledetectlib": "^2.7 || ^3.74",
+                "bear/resource": "^1.23",
+                "bear/sunday": "^1.7",
                 "php": "^8.1",
-                "psr/log": "^3.0",
-                "ray/aop": "^2.13",
-                "ray/di": "^2.7",
-                "twig/twig": "^2.15.3 || ^v3.4.3"
+                "psr/log": "^3.0.2",
+                "ray/aop": "^2.17",
+                "ray/di": "^2.17",
+                "twig/twig": "^v3.15"
             },
             "require-dev": {
-                "doctrine/annotations": "^1.13.3 || ^2.0",
-                "doctrine/coding-standard": "^12.0",
-                "phpmd/phpmd": "^2.6",
-                "phpstan/phpstan": "^1.10",
-                "phpunit/phpunit": "^9.5.21",
-                "ray/rector-ray": "^1.0",
-                "rector/rector": "^0.15.3",
-                "squizlabs/php_codesniffer": "^3.7",
-                "vimeo/psalm": "^5.4"
+                "bamarni/composer-bin-plugin": "^1.8.2",
+                "doctrine/annotations": "^1.14.4 || ^2.0",
+                "mobiledetect/mobiledetectlib": "^3.74.3",
+                "phpunit/phpunit": "^9.6.21"
+            },
+            "suggest": {
+                "mobiledetect/mobiledetectlib": "MobileTwigModule"
             },
             "type": "library",
+            "extra": {
+                "bamarni-bin": {
+                    "bin-links": true,
+                    "forward-command": true
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "Madapaja\\TwigModule\\": "src/"
@@ -1543,9 +1546,9 @@
             ],
             "support": {
                 "issues": "https://github.com/madapaja/Madapaja.TwigModule/issues",
-                "source": "https://github.com/madapaja/Madapaja.TwigModule/tree/2.5.1"
+                "source": "https://github.com/madapaja/Madapaja.TwigModule/tree/2.6.0"
             },
-            "time": "2024-05-17T23:14:36+00:00"
+            "time": "2024-11-23T11:48:52+00:00"
         },
         {
             "name": "marc-mabe/php-enum",

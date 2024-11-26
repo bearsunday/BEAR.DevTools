@@ -60,7 +60,7 @@ final class HaloRenderer implements RenderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
     public function render(ResourceObject $ro)
     {

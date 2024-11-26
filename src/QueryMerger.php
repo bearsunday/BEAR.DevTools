@@ -12,9 +12,7 @@ use const PHP_URL_QUERY;
 
 final class QueryMerger
 {
-    /**
-     * @param array<string, mixed> $query
-     */
+    /** @param array<string, mixed> $query */
     public function __invoke(string $uri, array $query): Uri
     {
         $path = (string) parse_url($uri, PHP_URL_PATH);
