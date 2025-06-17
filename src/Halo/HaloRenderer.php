@@ -18,7 +18,6 @@ use ReflectionObject;
 use function array_walk_recursive;
 use function assert;
 use function class_exists;
-use function explode;
 use function get_class;
 use function highlight_string;
 use function is_array;
@@ -37,7 +36,6 @@ use function spl_object_hash;
 use function str_contains;
 use function str_replace;
 use function strpos;
-use function substr;
 use function time;
 
 use const JSON_PRETTY_PRINT;
@@ -146,7 +144,6 @@ EOT;
             '/<!-- resource(.*?)resource_tab_end -->/s',
             /** @param array<int|string, string> $matches */
             static function ($matches): string {
-                $uri = substr(explode(' ', $matches[1])[0], 1);
                 preg_match('/ <!-- resource_body_start -->(.*?)<!-- resource_body_end -->/s', $matches[1], $resourceBodyMatch);
                 if (! isset($resourceBodyMatch[1])) {
                     throw new LogicException('Resource body not found'); // @codeCoverageIgnore
@@ -242,7 +239,7 @@ EOT;
             }
         );
 
-        return '<pre>' . json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . '</pre>';
+        return '<pre>' . (string) json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . '</pre>';
     }
 
     private function getResourceInfo(ResourceObject $ro): string
@@ -270,7 +267,6 @@ EOT;
                 continue;
             }
 
-            /** @var class-string $interceptor */
             $interceptorFile = (new ReflectionClass($interceptor))->getFileName();
             $result .= <<<EOT
 <li><a href="phpstorm://open?file={$interceptorFile}">{$interceptor}</a>
