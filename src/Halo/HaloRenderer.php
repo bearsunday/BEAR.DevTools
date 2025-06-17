@@ -20,6 +20,7 @@ use function explode;
 use function get_class;
 use function highlight_string;
 use function is_array;
+use function is_int;
 use function is_object;
 use function is_scalar;
 use function json_decode;
