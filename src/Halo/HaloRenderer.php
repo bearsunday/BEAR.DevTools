@@ -16,6 +16,7 @@ use ReflectionObject;
 
 use function array_walk_recursive;
 use function assert;
+use function class_exists;
 use function explode;
 use function get_class;
 use function highlight_string;
@@ -23,6 +24,7 @@ use function is_array;
 use function is_int;
 use function is_object;
 use function is_scalar;
+use function is_string;
 use function json_decode;
 use function json_encode;
 use function number_format;
@@ -260,8 +262,13 @@ EOT;
         $interceptors = json_decode($ro->headers[DevInvoker::HEADER_INTERCEPTORS], true);
         assert(is_array($interceptors));
         unset($ro->headers[DevInvoker::HEADER_INTERCEPTORS]);
-        $onGetInterceptors = $interceptors['onGet'] ?: [];
+        $onGetInterceptors = isset($interceptors['onGet']) && is_array($interceptors['onGet']) ? $interceptors['onGet'] : [];
         foreach ($onGetInterceptors as $interceptor) {
+            if (! is_string($interceptor) || ! class_exists($interceptor)) {
+                continue;
+            }
+
+            /** @var class-string $interceptor */
             $interceptorFile = (new ReflectionClass($interceptor))->getFileName();
             $result .= <<<EOT
 <li><a href="phpstorm://open?file={$interceptorFile}">{$interceptor}</a>

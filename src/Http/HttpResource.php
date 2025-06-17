@@ -190,7 +190,7 @@ final class HttpResource implements ResourceInterface
         return $this->request($curl, 'get', $url);
     }
 
-    /** @param array<mixed> $query */
+    /** @param array<string, mixed> $query */
     private function unsafeRequest(string $method, string $path, array $query): ResourceObject
     {
         $uri = ($this->queryMerger)($path, $query);

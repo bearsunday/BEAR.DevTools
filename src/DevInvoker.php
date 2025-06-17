@@ -8,7 +8,6 @@ use BEAR\Resource\AbstractRequest;
 use BEAR\Resource\InvokerInterface;
 use BEAR\Resource\Request;
 use BEAR\Resource\ResourceObject;
-use Ray\Aop\MethodInterceptor;
 use Ray\Aop\WeavedInterface;
 use Ray\Di\Di\Named;
 use XHProfRuns_Default;
@@ -16,6 +15,10 @@ use XHProfRuns_Default;
 use function assert;
 use function extension_loaded;
 use function get_class;
+use function is_array;
+use function is_int;
+use function is_object;
+use function is_string;
 use function json_encode;
 use function memory_get_usage;
 use function microtime;
@@ -78,7 +81,10 @@ final class DevInvoker implements InvokerInterface
         if (extension_loaded('xhprof')) {
             $xhprof = xhprof_disable();
             $profileId = (new XHProfRuns_Default(sys_get_temp_dir()))->save_run($xhprof, 'resource');
-            $resource->headers[self::HEADER_PROFILE_ID] = $profileId;
+            assert(is_string($profileId) || is_int($profileId) || $profileId === null);
+            if ($profileId !== null) {
+                $resource->headers[self::HEADER_PROFILE_ID] = (string) $profileId;
+            }
         }
 
         return $result;
@@ -94,6 +100,10 @@ final class DevInvoker implements InvokerInterface
         /** @psalm-suppress NoInterfaceProperties */
         assert(isset($request->resourceObject->bindings));
         $bind = $request->resourceObject->bindings;
+        if (! is_array($bind)) {
+            $bind = [];
+        }
+
         $interceptors = $this->getBindInfo($bind);
         $request->resourceObject->headers[self::HEADER_INTERCEPTORS] = (string) json_encode($interceptors);
 
@@ -101,20 +111,31 @@ final class DevInvoker implements InvokerInterface
     }
 
     /**
-     * @param array<string, array<MethodInterceptor>> $bindgs
+     * @param array<mixed> $bindgs
      *
-     * @return array<string, array<string>>
+     * @return array<string, list<class-string>>
      */
     public function getBindInfo(array $bindgs): array
     {
         $interceptorInfo = [];
         foreach ($bindgs as $method => $interceptors) {
+            if (! is_array($interceptors)) {
+                continue;
+            }
+
+            // Ensure method is a string
+            $methodKey = is_string($method) ? $method : (string) $method;
+
             $interceptorNames = [];
-            foreach ($interceptors as &$interceptor) {
+            foreach ($interceptors as $interceptor) {
+                if (! is_object($interceptor)) {
+                    continue;
+                }
+
                 $interceptorNames[] = get_class($interceptor);
             }
 
-            $interceptorInfo[$method] = $interceptorNames;
+            $interceptorInfo[$methodKey] = $interceptorNames;
         }
 
         return $interceptorInfo;
