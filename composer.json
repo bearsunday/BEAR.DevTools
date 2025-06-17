@@ -26,7 +26,8 @@
         "bear/package": "^1.10",
         "madapaja/twig-module": "^2.5",
         "phpunit/phpunit": "^9.6",
-        "ray/aura-sql-module": "^1.10"
+        "ray/aura-sql-module": "^1.10",
+        "symfony/polyfill": "^1.32"
     },
     "autoload": {
         "psr-4": {
