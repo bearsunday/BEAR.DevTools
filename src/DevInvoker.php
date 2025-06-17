@@ -8,6 +8,7 @@ use BEAR\Resource\AbstractRequest;
 use BEAR\Resource\InvokerInterface;
 use BEAR\Resource\Request;
 use BEAR\Resource\ResourceObject;
+use Override;
 use Ray\Aop\WeavedInterface;
 use Ray\Di\Di\Named;
 use XHProfRuns_Default;
@@ -51,6 +52,7 @@ final class DevInvoker implements InvokerInterface
     ) {
     }
 
+    #[Override]
     public function invoke(AbstractRequest $request): ResourceObject
     {
         $resource = $this->getRo($request);

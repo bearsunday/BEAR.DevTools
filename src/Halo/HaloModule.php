@@ -8,6 +8,7 @@ use BEAR\Dev\DevInvoker;
 use BEAR\Resource\Invoker;
 use BEAR\Resource\InvokerInterface;
 use BEAR\Resource\RenderInterface;
+use Override;
 use Ray\Di\AbstractModule;
 use Ray\Di\Scope;
 
@@ -20,6 +21,7 @@ final class HaloModule extends AbstractModule
         parent::__construct($module);
     }
 
+    #[Override]
     protected function configure(): void
     {
         $this->bind(InvokerInterface::class)->annotatedWith('original')->to(Invoker::class);

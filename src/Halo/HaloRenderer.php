@@ -9,6 +9,7 @@ use BEAR\Resource\RenderInterface;
 use BEAR\Resource\Request;
 use BEAR\Resource\ResourceObject;
 use LogicException;
+use Override;
 use Ray\Aop\WeavedInterface;
 use Ray\Di\Di\Named;
 use ReflectionClass;
@@ -65,6 +66,7 @@ final class HaloRenderer implements RenderInterface
     /**
      * {@inheritDoc}
      */
+    #[Override]
     public function render(ResourceObject $ro)
     {
         if (! $this->isEableHalo()) {

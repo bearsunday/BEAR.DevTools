@@ -11,6 +11,7 @@ use BEAR\Resource\ResourceObject;
 use BEAR\Resource\Uri as ResourceUri;
 use Koriym\PhpServer\PhpServer;
 use LogicException;
+use Override;
 
 use function exec;
 use function file_exists;
@@ -86,12 +87,14 @@ final class HttpResource implements ResourceInterface
      *
      * @codeCoverageIgnore
      */
+    #[Override]
     public function newInstance($uri): ResourceObject
     {
         throw new LogicException();
     }
 
     /** @codeCoverageIgnore */
+    #[Override]
     public function object(ResourceObject $ro): RequestInterface
     {
         unset($ro);
@@ -104,6 +107,7 @@ final class HttpResource implements ResourceInterface
      *
      * @codeCoverageIgnore
      */
+    #[Override]
     public function uri($uri): RequestInterface
     {
         throw new LogicException();
@@ -114,6 +118,7 @@ final class HttpResource implements ResourceInterface
      *
      * @codeCoverageIgnore
      */
+    #[Override]
     public function href(string $rel, array $query = []): ResourceObject
     {
         throw new LogicException();
@@ -122,6 +127,7 @@ final class HttpResource implements ResourceInterface
     /**
      * {@inheritDoc}
      */
+    #[Override]
     public function get(string $uri, array $query = []): ResourceObject
     {
         return $this->safeRequest($uri, $query);
@@ -130,6 +136,7 @@ final class HttpResource implements ResourceInterface
     /**
      * {@inheritDoc}
      */
+    #[Override]
     public function post(string $uri, array $query = []): ResourceObject
     {
         return $this->unsafeRequest('POST', $uri, $query);
@@ -138,6 +145,7 @@ final class HttpResource implements ResourceInterface
     /**
      * {@inheritDoc}
      */
+    #[Override]
     public function put(string $uri, array $query = []): ResourceObject
     {
         return $this->unsafeRequest('PUT', $uri, $query);
@@ -146,6 +154,7 @@ final class HttpResource implements ResourceInterface
     /**
      * {@inheritDoc}
      */
+    #[Override]
     public function patch(string $uri, array $query = []): ResourceObject
     {
         return $this->unsafeRequest('PATCH', $uri, $query);
@@ -154,6 +163,7 @@ final class HttpResource implements ResourceInterface
     /**
      * {@inheritDoc}
      */
+    #[Override]
     public function delete(string $uri, array $query = []): ResourceObject
     {
         return $this->unsafeRequest('DELETE', $uri, $query);
@@ -164,6 +174,7 @@ final class HttpResource implements ResourceInterface
      *
      * @codeCoverageIgnore
      */
+    #[Override]
     public function head(string $uri, array $query = []): ResourceObject
     {
         throw new LogicException();
@@ -174,6 +185,7 @@ final class HttpResource implements ResourceInterface
      *
      * @codeCoverageIgnore
      */
+    #[Override]
     public function options(string $uri, array $query = []): ResourceObject
     {
         throw new LogicException();
