@@ -18,6 +18,13 @@ class HaloModuleTest extends TestCase
         $this->resource = $injector->getInstance(ResourceInterface::class);
     }
 
+    protected function tearDown(): void
+    {
+        unset($_GET['halo']);
+
+        parent::tearDown();
+    }
+
     /** @return array<array<string>> */
     public function pageProvider(): array
     {

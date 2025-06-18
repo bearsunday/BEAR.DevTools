@@ -16,6 +16,13 @@ use Ray\Di\Injector;
 
 class HaloRendererTest extends TestCase
 {
+    public function tearDown(): void
+    {
+        unset($_GET['halo']);
+
+        parent::tearDown();
+    }
+
     public function testNoHalo(): void
     {
         $renderer = new HaloRenderer(new NullRenderer(), new TemplateLocator(new Meta('MyVendor\MyProject')));
