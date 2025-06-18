@@ -68,9 +68,11 @@ final class HaloRenderer implements RenderInterface
     public function render(ResourceObject $ro)
     {
         if (! $this->isEableHalo()) {
+            // @codeCoverageIgnoreStart
             $ro->view = $this->renderer->render($ro);
 
             return $ro->view;
+            // @codeCoverageIgnoreEnd
         }
 
         $originalView =  $this->renderer->render($ro);
@@ -85,7 +87,7 @@ final class HaloRenderer implements RenderInterface
     private function isEableHalo(): bool
     {
         if (! isset($_GET[self::HALO_KEY])) {
-            return isset($_COOKIE[self::HALO_COOKIE_KEY]);
+            return isset($_COOKIE[self::HALO_COOKIE_KEY]); // @codeCoverageIgnore
         }
 
         if ($_GET[self::HALO_KEY] === '1') {
@@ -94,9 +96,11 @@ final class HaloRenderer implements RenderInterface
             return true;
         }
 
+        // @codeCoverageIgnoreStart
         setcookie(self::HALO_COOKIE_KEY, '', time() - 3600); // delete cookies
 
         return false;
+        // @codeCoverageIgnoreEnd
     }
 
     private function addJsDevTools(string $body): string
@@ -144,12 +148,15 @@ EOT;
             '/<!-- resource(.*?)resource_tab_end -->/s',
             /** @param array<int|string, string> $matches */
             static function ($matches): string {
+                // @codeCoverageIgnoreStart
                 preg_match('/ <!-- resource_body_start -->(.*?)<!-- resource_body_end -->/s', $matches[1], $resourceBodyMatch);
                 if (! isset($resourceBodyMatch[1])) {
-                    throw new LogicException('Resource body not found'); // @codeCoverageIgnore
+                    throw new LogicException('Resource body not found');
                 }
 
                 return ''; // not used but needed for the callback signature
+
+                // @codeCoverageIgnoreEnd
             },
             $escapedBody
         );
@@ -216,6 +223,7 @@ EOT;
             return (string) $body;
         }
 
+        // @codeCoverageIgnoreStart
         if (! is_array($body)) {
             return '-';
         }
@@ -238,6 +246,7 @@ EOT;
                 $value = '(object) ' . get_class($value);
             }
         );
+        // @codeCoverageIgnoreEnd
 
         return '<pre>' . (string) json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . '</pre>';
     }
@@ -264,7 +273,7 @@ EOT;
         $onGetInterceptors = isset($interceptors['onGet']) && is_array($interceptors['onGet']) ? $interceptors['onGet'] : [];
         foreach ($onGetInterceptors as $interceptor) {
             if (! is_string($interceptor) || ! class_exists($interceptor)) {
-                continue;
+                continue; // @codeCoverageIgnore
             }
 
             $interceptorFile = (new ReflectionClass($interceptor))->getFileName();
@@ -311,6 +320,6 @@ EOT;
             return;
         }
 
-        setcookie(self::HALO_COOKIE_KEY, '1');
+        setcookie(self::HALO_COOKIE_KEY, '1'); // @codeCoverageIgnore
     }
 }

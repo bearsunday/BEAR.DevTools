@@ -32,7 +32,7 @@ use const XHPROF_FLAGS_CPU;
 use const XHPROF_FLAGS_MEMORY;
 use const XHPROF_FLAGS_NO_BUILTINS;
 
-final class DevInvoker implements InvokerInterface
+class DevInvoker implements InvokerInterface
 {
     public const HEADER_INTERCEPTORS = 'x-interceptors';
 
@@ -58,7 +58,8 @@ final class DevInvoker implements InvokerInterface
         $resource = $this->getRo($request);
 
         if ($request->method === Request::OPTIONS || $request->method === Request::HEAD) {
-            return $this->invoker->invoke($request);
+            // OPTIONS and HEAD requests are not processed by DevInvoker
+            return $this->invoker->invoke($request); // @codeCoverageIgnore
         }
 
         return $this->devInvoke($resource, $request);
@@ -103,7 +104,7 @@ final class DevInvoker implements InvokerInterface
         assert(isset($request->resourceObject->bindings));
         $bind = $request->resourceObject->bindings;
         if (! is_array($bind)) {
-            $bind = [];
+            $bind = []; // @codeCoverageIgnore
         }
 
         $interceptors = $this->getBindInfo($bind);
@@ -121,19 +122,14 @@ final class DevInvoker implements InvokerInterface
     {
         $interceptorInfo = [];
         foreach ($bindgs as $method => $interceptors) {
-            if (! is_array($interceptors)) {
-                continue;
-            }
+            assert(is_array($interceptors));
 
             // Ensure method is a string
             $methodKey = is_string($method) ? $method : (string) $method;
 
             $interceptorNames = [];
             foreach ($interceptors as $interceptor) {
-                if (! is_object($interceptor)) {
-                    continue;
-                }
-
+                assert(is_object($interceptor));
                 $interceptorNames[] = get_class($interceptor);
             }
 

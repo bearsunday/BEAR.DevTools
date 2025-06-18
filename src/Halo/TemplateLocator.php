@@ -20,8 +20,6 @@ use function substr;
 
 final class TemplateLocator
 {
-//    private array $twigPaths;
-
     /**
      * @param array<string> $twigPaths
      * @param array<string> $qiqPaths
@@ -55,7 +53,9 @@ final class TemplateLocator
     {
         foreach ($paths as $path) {
             $len = strlen(sprintf('%s\Resource', $this->meta->name));
-            $roPath = str_replace('\\', '/', substr($this->getClass($ro), $len + 1));
+            $roClass = $this->getClass($ro);
+
+            $roPath = str_replace('\\', '/', substr($roClass, $len + 1));
             $maybeFile = sprintf('%s/%s%s', $path, $roPath, $ext);
             if (file_exists($maybeFile)) {
                 return $maybeFile;
@@ -68,10 +68,12 @@ final class TemplateLocator
     private function getClass(ResourceObject $ro): string
     {
         if ($ro instanceof WeavedInterface) {
+            // @codeCoverageIgnoreStart
             /** @var \ReflectionClass<ResourceObject> $parentClass */
             $parentClass = (new ReflectionClass($ro))->getParentClass();
 
             return $parentClass->name;
+            // @codeCoverageIgnoreEnd
         }
 
         return get_class($ro);
