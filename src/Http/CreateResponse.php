@@ -31,14 +31,20 @@ final class CreateResponse
         $status = (string) array_shift($output);
         do {
             $line = array_shift($output);
-            assert(is_string($line));
+            if ($line === null) {
+                break;
+            }
+            $line = (string) $line;
             $headers[] = $line;
         } while ($line !== '');
 
         do {
             $line = array_shift($output);
+            if ($line === null) {
+                break;
+            }
             $body[] = (string) $line;
-        } while ($line !== null);
+        } while (true);
 
         $ro = new NullResourceObject();
         $ro->uri = $uri;
