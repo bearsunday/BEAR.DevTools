@@ -42,5 +42,4 @@ jobs:
           chmod +x composer-require-checker.phar
 
       - name: Run composer-require-checker without config
-        if: ${{ !inputs.has_crc_config }}
         run: ./composer-require-checker.phar check ./composer.json
