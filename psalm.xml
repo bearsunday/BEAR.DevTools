@@ -12,4 +12,8 @@
             <directory name="src-deprecated" />
         </ignoreFiles>
     </projectFiles>
+    <issueHandlers>
+        <UnusedClass errorLevel="suppress" />
+        <PossiblyUnusedMethod errorLevel="suppress" />
+    </issueHandlers>
 </psalm>

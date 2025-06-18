@@ -8,6 +8,8 @@ use BEAR\Dev\DevInvoker;
 use BEAR\Resource\RenderInterface;
 use BEAR\Resource\Request;
 use BEAR\Resource\ResourceObject;
+use LogicException;
+use Override;
 use Ray\Aop\WeavedInterface;
 use Ray\Di\Di\Named;
 use ReflectionClass;
@@ -15,12 +17,14 @@ use ReflectionObject;
 
 use function array_walk_recursive;
 use function assert;
-use function explode;
+use function class_exists;
 use function get_class;
 use function highlight_string;
 use function is_array;
+use function is_int;
 use function is_object;
 use function is_scalar;
+use function is_string;
 use function json_decode;
 use function json_encode;
 use function number_format;
@@ -32,7 +36,6 @@ use function spl_object_hash;
 use function str_contains;
 use function str_replace;
 use function strpos;
-use function substr;
 use function time;
 
 use const JSON_PRETTY_PRINT;
@@ -59,8 +62,9 @@ final class HaloRenderer implements RenderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
+    #[Override]
     public function render(ResourceObject $ro)
     {
         if (! $this->isEableHalo()) {
@@ -103,8 +107,8 @@ final class HaloRenderer implements RenderInterface
 
         $bootstrapCss = '<link href="https://koriym.github.io/BEAR.Package/assets/css/bootstrap.bear.css" rel="stylesheet">' . PHP_EOL .
             '<link href="https://koriym.github.io/BEAR.Package/assets/css/bear.dev.css" rel="stylesheet">' . PHP_EOL;
-        $bootstrapCss .= strpos($body, 'glyphicons.css') ? '' : '<link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css" rel="stylesheet">' . PHP_EOL;
-        $tabJs = strpos($body, '/assets/js/bootstrap-tab.js') ? '' : '<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap-tab.js"></script>' . PHP_EOL;
+        $bootstrapCss .= is_int(strpos($body, 'glyphicons.css')) ? '' : '<link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css" rel="stylesheet">' . PHP_EOL;
+        $tabJs = is_int(strpos($body, '/assets/js/bootstrap-tab.js')) ? '' : '<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap-tab.js"></script>' . PHP_EOL;
         $bootstrapJs = '<link href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/united/bootstrap.min.css" rel="stylesheet">';
         $toolLoad = <<<EOT
 <!-- BEAR.Sunday dev tools -->
@@ -138,11 +142,14 @@ EOT;
 
         $resourceBody = (string) preg_replace_callback(
             '/<!-- resource(.*?)resource_tab_end -->/s',
-            static function ($matches) {
-                $uri = substr(explode(' ', $matches[1])[0], 1);
+            /** @param array<int|string, string> $matches */
+            static function ($matches): string {
                 preg_match('/ <!-- resource_body_start -->(.*?)<!-- resource_body_end -->/s', $matches[1], $resourceBodyMatch);
+                if (! isset($resourceBodyMatch[1])) {
+                    throw new LogicException('Resource body not found'); // @codeCoverageIgnore
+                }
 
-                return "<!-- resource:$uri -->\n{$resourceBodyMatch[1]}<!-- /resource:$uri -->";
+                return ''; // not used but needed for the callback signature
             },
             $escapedBody
         );
@@ -232,7 +239,7 @@ EOT;
             }
         );
 
-        return '<pre>' . json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . '</pre>';
+        return '<pre>' . (string) json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . '</pre>';
     }
 
     private function getResourceInfo(ResourceObject $ro): string
@@ -254,8 +261,12 @@ EOT;
         $interceptors = json_decode($ro->headers[DevInvoker::HEADER_INTERCEPTORS], true);
         assert(is_array($interceptors));
         unset($ro->headers[DevInvoker::HEADER_INTERCEPTORS]);
-        $onGetInterceptors = $interceptors['onGet'] ?: [];
+        $onGetInterceptors = isset($interceptors['onGet']) && is_array($interceptors['onGet']) ? $interceptors['onGet'] : [];
         foreach ($onGetInterceptors as $interceptor) {
+            if (! is_string($interceptor) || ! class_exists($interceptor)) {
+                continue;
+            }
+
             $interceptorFile = (new ReflectionClass($interceptor))->getFileName();
             $result .= <<<EOT
 <li><a href="phpstorm://open?file={$interceptorFile}">{$interceptor}</a>

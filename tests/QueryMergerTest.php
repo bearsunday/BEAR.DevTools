@@ -14,6 +14,7 @@ class QueryMergerTest extends TestCase
     protected function setUp(): void
     {
         $this->queryMerger = new QueryMerger();
+
         parent::setUp();
     }
 

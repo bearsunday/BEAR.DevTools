@@ -1,12 +1,10 @@
 {
     "require": {
-        "doctrine/coding-standard": "^9.0",
+        "doctrine/coding-standard": "^13.0",
         "phpmd/phpmd": "^2.9",
-        "phpmetrics/phpmetrics": "^2.7",
-        "phpstan/phpstan": "^1.8",
-        "psalm/plugin-phpunit": "^0",
-        "squizlabs/php_codesniffer": "^3.5",
-        "vimeo/psalm": "^4.2"
+        "phpmetrics/phpmetrics": "v3.0.0rc8",
+        "phpstan/phpstan": "^2.1",
+        "vimeo/psalm": "^6.12"
     },
     "config": {
         "allow-plugins": {
