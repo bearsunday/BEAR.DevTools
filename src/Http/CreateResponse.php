@@ -11,9 +11,7 @@ use BEAR\Resource\Uri;
 use function array_key_exists;
 use function array_pop;
 use function array_shift;
-use function assert;
 use function implode;
-use function is_string;
 use function json_decode;
 use function preg_match;
 
@@ -34,6 +32,7 @@ final class CreateResponse
             if ($line === null) {
                 break;
             }
+
             $line = (string) $line;
             $headers[] = $line;
         } while ($line !== '');
@@ -43,6 +42,7 @@ final class CreateResponse
             if ($line === null) {
                 break;
             }
+
             $body[] = (string) $line;
         } while (true);
 
@@ -60,7 +60,10 @@ final class CreateResponse
     private function getCode(string $status): int
     {
         preg_match('/\d{3}/', $status, $match);
-        assert(array_key_exists(0, $match));
+        if (! array_key_exists(0, $match)) {
+            // Default to 200 OK if no status code is found
+            return 200;
+        }
 
         return (int) $match[0];
     }
@@ -76,8 +79,11 @@ final class CreateResponse
         array_pop($headers);
         foreach ($headers as $header) {
             preg_match('/(.+):\s(.+)/', $header, $matched);
-            assert(array_key_exists(1, $matched));
-            assert(array_key_exists(2, $matched));
+            if (! array_key_exists(1, $matched) || ! array_key_exists(2, $matched)) {
+                // Skip malformed headers
+                continue;
+            }
+
             $keyedHeader[$matched[1]] = $matched[2];
         }
 
