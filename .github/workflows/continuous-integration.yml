@@ -48,7 +48,7 @@ jobs:
           tools: composer:v2
 
       - name: Install XHProf (Windows)
-        shell: wsh
+        shell: powershell
         run: |
           $phpVersion = '8.4'
           $phpArch = 'nts-vs16-x64'
