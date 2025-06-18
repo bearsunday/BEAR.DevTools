@@ -56,7 +56,7 @@ jobs:
           $extDir = Join-Path $phpDir "ext"
           $phpIniPath = Join-Path $phpDir "php.ini"
           $tempDir = New-Item -ItemType Directory -Path "$env:TEMP\xhprof"
-          $zipUrl = "https://windows.php.net/downloads/pecl/releases/xhprof/2.3.10/php_xhprof-2.3.10-8.4-nts-x64.zip"
+          $zipUrl = "https://downloads.php.net/~windows/pecl/releases/xhprof/2.3.10/php_xhprof-2.3.10-8.4-nts-vs17-x64.zip"
           $zipPath = "$tempDir\xhprof.zip"
           Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
           Expand-Archive -Path $zipPath -DestinationPath $tempDir
