@@ -7,6 +7,7 @@ on:
 
 jobs:
   ci:
+    name: Continuous Integration (Ubuntu)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -50,22 +51,20 @@ jobs:
       - name: Install XHProf (Windows)
         shell: powershell
         run: |
-          $phpVersion = '8.4'
-          $phpArch = 'nts-vs16-x64'
+          $phpExe = (Get-Command php).Source
+          $phpDir = Split-Path $phpExe
+          $extDir = Join-Path $phpDir "ext"
+          $phpIniPath = Join-Path $phpDir "php.ini"
           $xhprofVersion = '2.3.10'
-          $extDir = Get-ChildItem "C:\Program Files\PHP\$phpVersion\ext"
-          $tempDir = New-Item -ItemType Directory -Path "$env:TEMP\xhprof"          
+          $phpVersion = & php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;"
+          $phpArch = 'nts-vs16-x64'
+          $tempDir = New-Item -ItemType Directory -Path "$env:TEMP\xhprof"
           $dllUrl = "https://example.com/php_xhprof-$xhprofVersion-php-$phpVersion-$phpArch.dll"
           $dllPath = "$tempDir\php_xhprof.dll"
-          
           Write-Host "Downloading XHProf DLL from $dllUrl to $dllPath"
           Invoke-WebRequest -Uri $dllUrl -OutFile $dllPath
-          
           Copy-Item $dllPath -Destination $extDir
-          
-          $phpIniPath = "C:\Program Files\PHP\$phpVersion\php.ini"
           Add-Content -Path $phpIniPath -Value "extension=php_xhprof.dll"
-          
           Write-Host "XHProf installed and enabled"
 
       - name: Install dependencies
