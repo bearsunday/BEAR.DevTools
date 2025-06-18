@@ -55,16 +55,13 @@ jobs:
           $phpDir = Split-Path $phpExe
           $extDir = Join-Path $phpDir "ext"
           $phpIniPath = Join-Path $phpDir "php.ini"
-          $xhprofVersion = '2.3.10'
-          $phpVersion = & php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;"
-          $phpArch = 'nts-vs16-x64'
           $tempDir = New-Item -ItemType Directory -Path "$env:TEMP\xhprof"
-          $dllUrl = "https://example.com/php_xhprof-$xhprofVersion-php-$phpVersion-$phpArch.dll"
-          $dllPath = "$tempDir\php_xhprof.dll"
-          Write-Host "Downloading XHProf DLL from $dllUrl to $dllPath"
-          Invoke-WebRequest -Uri $dllUrl -OutFile $dllPath
-          Copy-Item $dllPath -Destination $extDir
-          Add-Content -Path $phpIniPath -Value "extension=php_xhprof.dll"
+          $zipUrl = "https://windows.php.net/downloads/pecl/releases/xhprof/2.3.10/php_xhprof-2.3.10-8.4-nts-x64.zip"
+          $zipPath = "$tempDir\xhprof.zip"
+          Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $tempDir
+          Copy-Item "$tempDir\php_xhprof.dll" -Destination $extDir
+          Add-Content -Path $phpIniPath -Value "`nextension=php_xhprof.dll"
           Write-Host "XHProf installed and enabled"
 
       - name: Install dependencies
