@@ -16,8 +16,24 @@ use Ray\Di\Injector;
 
 class HaloRendererTest extends TestCase
 {
-    public function testRender(): void
+    public function tearDown(): void
     {
+        unset($_GET['halo']);
+
+        parent::tearDown();
+    }
+
+    public function testNoHalo(): void
+    {
+        $renderer = new HaloRenderer(new NullRenderer(), new TemplateLocator(new Meta('MyVendor\MyProject')));
+        $view = $renderer->render(new FakeHalo());
+        $this->assertSame('', $view);
+    }
+
+    /** @return array{0:ResourceObject, 1:HaloRenderer} */
+    public function testRender(): array
+    {
+        $_GET['halo'] = '1';
         $originalRenderer = new class implements RenderInterface
         {
             public function render(ResourceObject $ro): string
@@ -47,5 +63,20 @@ class HaloRendererTest extends TestCase
         $view = $renderer->render($ro);
         $this->assertStringStartsWith('<html>', $view);
         $this->assertStringContainsString('<body><!-- resource:', $view);
+
+        return [$ro, $renderer];
+    }
+
+    /**
+     * @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer
+     *
+     * @depends testRender
+     */
+    public function testRenderWithHaloBodyString(array $roRenderer): void
+    {
+        [$ro, $renderer] = $roRenderer;
+        $ro->body = 'Hello World!';
+        $view = $renderer->render($ro);
+        $this->assertStringContainsString('<p>Hello World!</p>', $view);
     }
 }

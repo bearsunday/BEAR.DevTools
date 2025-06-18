@@ -22,6 +22,7 @@
         "xhprof/xhprof": "^2.3"
     },
     "require-dev": {
+        "ext-xhprof": "*",
         "bamarni/composer-bin-plugin": "^1.4",
         "bear/package": "^1.10",
         "madapaja/twig-module": "^2.5",

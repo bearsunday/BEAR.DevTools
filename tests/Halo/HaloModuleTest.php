@@ -14,9 +14,15 @@ class HaloModuleTest extends TestCase
 
     protected function setUp(): void
     {
-        $_GET['halo'] = '1';
         $injector = Injector::getInstance('dev-app');
         $this->resource = $injector->getInstance(ResourceInterface::class);
+    }
+
+    protected function tearDown(): void
+    {
+        unset($_GET['halo']);
+
+        parent::tearDown();
     }
 
     /** @return array<array<string>> */
@@ -31,6 +37,7 @@ class HaloModuleTest extends TestCase
     /** @dataProvider pageProvider */
     public function testModule(string $uri): void
     {
+        $_GET['halo'] = '1';
         $ro = $this->resource->get($uri);
         $view = (string) $ro;
         $this->assertStringContainsString('<!-- resource:page://self/', $view);
