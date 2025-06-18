@@ -16,7 +16,7 @@ use Ray\Di\Injector;
 
 class HaloRendererTest extends TestCase
 {
-    public function atestNoHalo(): void
+    public function testNoHalo(): void
     {
         $renderer = new HaloRenderer(new NullRenderer(), new TemplateLocator(new Meta('MyVendor\MyProject')));
         $view = $renderer->render(new FakeHalo());
