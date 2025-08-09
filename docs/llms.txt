@@ -1,0 +1,159 @@
+# BEAR.DevTools
+
+> Development tools and utilities for BEAR.Sunday framework applications
+
+## Overview
+
+BEAR.DevTools is a development package for the BEAR.Sunday PHP framework that provides essential debugging and testing utilities. This package is designed to be installed as a development dependency and provides visual debugging interfaces and HTTP testing capabilities.
+
+## Core Components
+
+### 1. Halo Module - Visual Resource Inspector
+
+The Halo module creates a visual debugging interface around HTML representations of BEAR.Sunday resources. This concept is inspired by the Seaside Smalltalk web framework.
+
+**Key Features:**
+- Visual frames around rendered resources
+- Resource metadata display (status, representation, interceptors)
+- Direct links to resource class and template editors
+- Performance profiling integration
+- Real-time resource state inspection
+
+**Usage:**
+```php
+use BEAR\Dev\Halo\HaloModule;
+use Ray\Di\AbstractModule;
+
+class DevModule extends AbstractModule
+{
+    protected function configure(): void
+    {
+        $this->install(new HaloModule($this));
+    }
+}
+```
+
+### 2. HttpResource Client - HTTP Testing Utility
+
+HttpResource provides an HTTP client that automatically starts a built-in PHP server for testing BEAR.Sunday applications.
+
+**Key Features:**
+- Automatic local server startup using koriym/php-server
+- Full HTTP method support (GET, POST, PUT, DELETE, PATCH)
+- Comprehensive request/response logging
+- Curl command logging for reproducible tests
+- Integration with BEAR.Sunday resource objects
+
+**Usage:**
+```php
+use BEAR\Dev\Http\HttpResource;
+
+$resource = new HttpResource('127.0.0.1:8099', '/path/to/index.php', '/path/to/curl.log');
+$ro = $resource->get('/users');
+$ro = $resource->post('/users', ['name' => 'John', 'email' => 'john@example.com']);
+```
+
+## Architecture
+
+### Dependencies
+- **Core**: PHP 8.0+, BEAR.Sunday framework components
+- **HTTP Server**: koriym/php-server for built-in server functionality
+- **Database**: aura/sql v3-v6 for database connectivity (including PHP 8.4 support)
+- **Profiling**: XHProf integration (optional, via require-dev)
+
+### File Structure
+```
+src/
+├── Halo/           # Visual debugging interface
+│   ├── HaloModule.php
+│   ├── HaloRenderer.php
+│   └── TemplateLocator.php
+├── Http/           # HTTP testing utilities
+│   ├── HttpResource.php
+│   └── CreateResponse.php
+├── DevInvoker.php  # Development-specific resource invoker
+├── QueryMerger.php # Query parameter handling
+└── Uri.php         # URI utilities
+
+src-deprecated/     # Legacy components for backward compatibility
+template/          # Test templates and examples
+tests/            # Comprehensive test suite
+```
+
+## Integration with BEAR.Sunday
+
+BEAR.DevTools integrates seamlessly with the BEAR.Sunday ecosystem:
+
+1. **Resource-Oriented**: Works with BEAR.Sunday's resource-oriented architecture
+2. **Dependency Injection**: Uses Ray.Di for dependency injection
+3. **AOP Integration**: Leverages AOP interceptors for debugging
+4. **HAL+JSON**: Supports hypermedia API development and testing
+5. **Context-Aware**: Works with different application contexts (dev, test, etc.)
+
+## Development Workflow
+
+### Testing Workflows
+```php
+// HTTP workflow testing example
+class WorkflowTest extends TestCase
+{
+    protected ResourceInterface $resource;
+    
+    public function testUserCreationWorkflow(): void
+    {
+        // Test resource access
+        $index = $this->resource->get('/');
+        $this->assertSame(200, $index->code);
+        
+        // Follow HAL links
+        $usersLink = json_decode((string) $index)->_links->users->href;
+        $users = $this->resource->get($usersLink);
+        
+        // Test resource creation
+        $postLink = json_decode((string) $users)->_links->{'create-user'}->href;
+        $newUser = $this->resource->post($postLink, ['name' => 'Test User']);
+        $this->assertSame(201, $newUser->code);
+    }
+}
+```
+
+### Request Logging
+All HTTP requests are logged with full curl equivalents:
+```bash
+curl -s -i 'http://127.0.0.1:8099/users'
+
+HTTP/1.1 200 OK
+Content-Type: application/hal+json
+{
+  "_links": {
+    "self": {"href": "/users"},
+    "create-user": {"href": "/users", "method": "POST"}
+  },
+  "users": [...]
+}
+```
+
+## Common Use Cases
+
+1. **API Development**: Test hypermedia APIs with automatic server startup
+2. **Resource Debugging**: Visual inspection of resource state and interceptors
+3. **Integration Testing**: Full HTTP workflow testing with logging
+4. **Performance Analysis**: XHProf integration for profiling (optional)
+5. **Template Development**: Direct links to templates from rendered output
+
+## Best Practices
+
+1. **Development Only**: Install as dev dependency (`composer require --dev`)
+2. **Context Separation**: Use only in development/testing contexts
+3. **Log Management**: Configure appropriate log file locations
+4. **Server Cleanup**: HttpResource automatically manages server lifecycle
+5. **Security**: Never use in production environments
+
+## Compatibility
+
+- **PHP**: 8.0+ (supports PHP 8.4)
+- **BEAR.Sunday**: All current versions
+- **Database**: Compatible with aura/sql v3-v6
+- **Server**: Works with built-in PHP server and external servers
+
+This package is essential for BEAR.Sunday development, providing the tools needed for efficient debugging, testing, and development of resource-oriented applications.

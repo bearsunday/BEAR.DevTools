@@ -11,24 +11,22 @@
     "require": {
         "php": "^8.0",
         "ext-filter": "*",
-        "aura/sql": "^3 || ^4 || ^5",
+        "aura/sql": "^3 || ^4 || ^5 || ^6",
         "bear/app-meta": "^1.8",
         "bear/resource": "^1.17",
         "koriym/php-server": "^1.0",
         "psr/log": "^1 || ^2 || ^3",
         "ray/aop": "^2.14",
         "ray/di": "^2.14",
-        "symfony/process": "^v5.4 || ^v6.4 || ^v7.0",
-        "xhprof/xhprof": "^2.3"
+        "symfony/process": "^v5.4 || ^v6.4 || ^v7.0"
     },
     "require-dev": {
-        "ext-xhprof": "*",
         "bamarni/composer-bin-plugin": "^1.4",
         "bear/package": "^1.10",
         "madapaja/twig-module": "^2.5",
         "phpunit/phpunit": "^9.6",
         "ray/aura-sql-module": "^1.10",
-        "symfony/polyfill": "^1.32"
+        "xhprof/xhprof": "^2.3"
     },
     "autoload": {
         "psr-4": {
@@ -83,7 +81,7 @@
         }
     ],
     "suggest": {
-        "ext-xhprof": "XHprof hierarchical profiler"
+        "ext-xhprof": "XHprof hierarchical profiler for performance analysis"
     },
     "extra": {
         "bamarni-bin": {

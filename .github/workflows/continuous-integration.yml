@@ -64,8 +64,8 @@ jobs:
           Add-Content -Path $phpIniPath -Value "`nextension=php_xhprof.dll"
           Write-Host "XHProf installed and enabled"
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
+      - name: Install dependencies (exclude xhprof package on Windows)
+        run: composer remove xhprof/xhprof --dev --no-update && composer install --prefer-dist --no-progress --no-suggest --ignore-platform-reqs
 
       - name: Run tests
         run: composer test
