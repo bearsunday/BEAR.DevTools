@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-01-09
+
 ### Added
 - Support for aura/sql v6 for PHP 8.4 compatibility
 
