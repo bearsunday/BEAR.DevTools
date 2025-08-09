@@ -10,6 +10,7 @@
 /phpunit.xml.dist                export-ignore
 /psalm.xml                       export-ignore
 /composer-require-checker.json   export-ignore
+/CLAUDE.md                       export-ignore
 /.github                         export-ignore
 
 # Configure diff output for .php and .phar files.

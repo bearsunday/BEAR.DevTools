@@ -1,0 +1,33 @@
+title: BEAR.DevTools
+description: Development tools and utilities for BEAR.Sunday framework applications
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# GitHub Pages settings
+url: "https://bearsunday.github.io"
+baseurl: "/BEAR.DevTools"
+
+# Markdown settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Include/exclude files
+include:
+  - "llms.txt"
+exclude:
+  - ".gitignore"
+  - "Gemfile"
+  - "Gemfile.lock"
+
+# Collections and defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
