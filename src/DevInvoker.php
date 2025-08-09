@@ -14,6 +14,7 @@ use Ray\Di\Di\Named;
 use XHProfRuns_Default;
 
 use function assert;
+use function class_exists;
 use function extension_loaded;
 use function get_class;
 use function is_array;
@@ -81,7 +82,7 @@ final class DevInvoker implements InvokerInterface
         // post process for log
         $resource->headers[self::HEADER_EXECUTION_TIME] = (string) (microtime(true) - $time);
         $resource->headers[self::HEADER_MEMORY_USAGE] = (string) (memory_get_usage() - $memory);
-        if (extension_loaded('xhprof')) {
+        if (extension_loaded('xhprof') && class_exists('XHProfRuns_Default')) {
             $xhprof = xhprof_disable();
             $profileId = (new XHProfRuns_Default(sys_get_temp_dir()))->save_run($xhprof, 'resource');
             assert(is_string($profileId) || is_int($profileId) || $profileId === null);
