@@ -32,7 +32,7 @@ use const XHPROF_FLAGS_CPU;
 use const XHPROF_FLAGS_MEMORY;
 use const XHPROF_FLAGS_NO_BUILTINS;
 
-class DevInvoker implements InvokerInterface
+final class DevInvoker implements InvokerInterface
 {
     public const HEADER_INTERCEPTORS = 'x-interceptors';
 

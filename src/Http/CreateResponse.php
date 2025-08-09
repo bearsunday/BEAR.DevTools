@@ -34,7 +34,7 @@ final class CreateResponse
                 break;
             }
 
-            $line = (string) $line;
+            $line = $line;
             $headers[] = $line;
         } while ($line !== '');
 
@@ -44,7 +44,7 @@ final class CreateResponse
                 break;
             }
 
-            $body[] = (string) $line;
+            $body[] = $line;
         } while (true);
 
         $ro = new NullResourceObject();
