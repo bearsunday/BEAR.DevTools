@@ -9,7 +9,7 @@
         }
     ],
     "require": {
-        "php": "^8.0",
+        "php": "^8.2",
         "ext-filter": "*",
         "aura/sql": "^3 || ^4 || ^5 || ^6",
         "bear/app-meta": "^1.8",

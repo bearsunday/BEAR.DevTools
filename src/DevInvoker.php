@@ -49,7 +49,7 @@ final class DevInvoker implements InvokerInterface
 
     public function __construct(
         #[Named('original')]
-        private InvokerInterface $invoker
+        private readonly InvokerInterface $invoker,
     ) {
     }
 

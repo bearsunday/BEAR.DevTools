@@ -28,26 +28,19 @@ use const PHP_EOL;
 
 final class HttpResource implements ResourceInterface
 {
-    /** @var string */
-    private $logFile;
+    private static ?PhpServer $server = null;
 
-    /** @var string */
-    private $baseUri;
+    private readonly string $baseUri;
+    private readonly QueryMerger $queryMerger;
+    private readonly CreateResponse $createResponse;
 
-    /** @var PhpServer */
-    private static $server;
-
-    /** @var QueryMerger */
-    private $queryMerger;
-
-    /** @var CreateResponse */
-    private $createResponse;
-
-    public function __construct(string $host, string $index, string $logFile = 'php://stderr')
-    {
+    public function __construct(
+        string $host,
+        string $index,
+        private readonly string $logFile = 'php://stderr',
+    ) {
         $this->baseUri = sprintf('http://%s', $host);
-        $this->logFile = $logFile;
-        $this->resetLog($logFile);
+        $this->resetLog($this->logFile);
 
         $this->startServer($host, $index);
         $this->queryMerger = new QueryMerger();

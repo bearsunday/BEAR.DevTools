@@ -7,6 +7,7 @@ namespace BEAR\Dev\Http;
 use BEAR\Resource\ResourceInterface;
 use Ray\Di\InjectorInterface;
 use ReflectionClass;
+
 use function dirname;
 use function register_shutdown_function;
 
@@ -15,21 +16,18 @@ use function register_shutdown_function;
  */
 trait BuiltinServerStartTrait
 {
-    /** @var string */
-    private static $host = '127.0.0.1:8088';
+    private static string $host = '127.0.0.1:8088';
 
-    /** @var string */
-    private $httpHost = 'http://127.0.0.1:8088';
+    private string $httpHost = 'http://127.0.0.1:8088';
 
-    /** @var BuiltinServer */
-    private static $server;
+    private static BuiltinServer $server;
 
     public static function setUpBeforeClass(): void
     {
-        $dir = dirname((new ReflectionClass(static::class))->getFileName());
+        $dir = dirname((string) (new ReflectionClass(static::class))->getFileName());
         self::$server = new BuiltinServer(self::$host, $dir . '/index.php');
         self::$server->start();
-        register_shutdown_function(static function () {
+        register_shutdown_function(static function (): void {
             self::$server->stop();
         });
     }

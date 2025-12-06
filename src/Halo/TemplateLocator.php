@@ -25,13 +25,13 @@ final class TemplateLocator
      * @param array<string> $qiqPaths
      */
     public function __construct(
-        private AbstractAppMeta $meta,
+        private readonly AbstractAppMeta $meta,
         #[TwigPaths]
-        private array $twigPaths = [],
+        private readonly array $twigPaths = [],
         #[Named('qiq_paths')]
-        private array $qiqPaths = [],
+        private readonly array $qiqPaths = [],
         #[Named('qiq_extension')]
-        private string $qiqExt = '',
+        private readonly string $qiqExt = '',
     ) {
     }
 

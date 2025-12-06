@@ -30,7 +30,7 @@ final class DbProfile
      *
      * @deprecated
      */
-    public function log() : array
+    public function log(): array
     {
         return [];
     }

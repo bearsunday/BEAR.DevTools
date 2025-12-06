@@ -6,15 +6,12 @@ namespace BEAR\Dev\Http;
 
 use RuntimeException;
 use Symfony\Component\Process\Process;
-use function error_log;
-use function is_int;
+
 use function register_shutdown_function;
-use function sleep;
 use function sprintf;
-use function strpos;
-use function version_compare;
+use function str_contains;
+
 use const PHP_BINARY;
-use const PHP_VERSION;
 
 /** @deprecated User koriym/php-server PhpServer instead */
 final class BuiltinServer
@@ -23,20 +20,18 @@ final class BuiltinServer
      * @psalm-var Process
      * @phpstan-var Process<string>
      */
-    private $process;
+    private readonly Process $process;
 
-    /** @var string */
-    private $host;
-
-    public function __construct(string $host, string $index)
-    {
+    public function __construct(
+        private readonly string $host,
+        string $index,
+    ) {
         $this->process = new Process([
             PHP_BINARY,
             '-S',
             $host,
             $index,
         ]);
-        $this->host = $host;
         register_shutdown_function(function (): void {
             // @codeCoverageIgnoreStart
             $this->process->stop();
@@ -47,22 +42,14 @@ final class BuiltinServer
     public function start(): void
     {
         $this->process->start();
-        if (version_compare(PHP_VERSION, '7.4.0', '<')) {
-            // @codeCoverageIgnoreStart
-            sleep(1);
-
-            return;
-            // @codeCoverageIgnoreEnd
-        }
-
         $this->process->waitUntil(function (string $type, string $output): bool {
-            if ($type === 'err' && ! is_int(strpos($output, 'started'))) {
+            if ($type === 'err' && ! str_contains($output, 'started')) {
                 // @codeCoverageIgnoreStart
                 error_log($output);
                 // @codeCoverageIgnoreEnd
             }
 
-            return (bool) strpos($output, $this->host);
+            return str_contains($output, $this->host);
         });
     }
 

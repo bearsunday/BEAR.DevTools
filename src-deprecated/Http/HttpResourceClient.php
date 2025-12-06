@@ -39,18 +39,11 @@ use const PHP_URL_QUERY;
  */
 class HttpResourceClient implements ResourceInterface
 {
-    /** @var ResourceInterface */
-    private $resource;
+    private readonly ResourceInterface $resource;
+    private readonly string $logFile;
+    private readonly string $baseUri;
 
-    /** @var string */
-    private $logFile = '';
-
-    /** @var string */
-    private $baseUri;
-
-    /**
-     * @psalm-param class-string $className
-     */
+    /** @psalm-param class-string $className */
     public function __construct(string $baseUri, InjectorInterface $injector, string $className)
     {
         static $firstRun = true;
@@ -79,9 +72,7 @@ class HttpResourceClient implements ResourceInterface
         throw new LogicException();
     }
 
-    /**
-     * @codeCoverageIgnore
-     */
+    /** @codeCoverageIgnore */
     public function object(ResourceObject $ro): RequestInterface
     {
         throw new LogicException();
@@ -196,9 +187,7 @@ class HttpResourceClient implements ResourceInterface
         return sprintf('%s/log/%s.log', $dir, $class);
     }
 
-    /**
-     * @param array<string> $query
-     */
+    /** @param array<string> $query */
     private function safeLog(string $uri, array $query): void
     {
         $path = parse_url($uri, PHP_URL_PATH);
@@ -211,9 +200,7 @@ class HttpResourceClient implements ResourceInterface
         file_put_contents($this->logFile, $log, FILE_APPEND);
     }
 
-    /**
-     * @param array<string> $query
-     */
+    /** @param array<string> $query */
     private function unsafeLog(string $method, string $uri, array $query): void
     {
         $path = parse_url($uri, PHP_URL_PATH);

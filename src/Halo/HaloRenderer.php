@@ -56,8 +56,8 @@ final class HaloRenderer implements RenderInterface
 
     public function __construct(
         #[Named('original')]
-        private RenderInterface $renderer,
-        private TemplateLocator $templateLocator
+        private readonly RenderInterface $renderer,
+        private readonly TemplateLocator $templateLocator,
     ) {
     }
 
