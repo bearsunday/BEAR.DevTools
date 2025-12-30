@@ -260,6 +260,10 @@ final class HttpResource implements ResourceInterface
     private function executeCurl(string $url, string $method, string|null $body = null): array
     {
         $ch = curl_init($url);
+        if ($ch === false) {
+            return []; // @codeCoverageIgnore
+        }
+
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, true);
 
