@@ -66,4 +66,41 @@ class HttpResourceTest extends TestCase
         $this->assertSame(200, $ro->code);
         $this->assertStringContainsString('"method": "onGet"', $ro->view);
     }
+
+    public function testPostWithSpecialCharactersSingleQuote(): void
+    {
+        $ro = $this->resource->post('/', ['data' => ['command' => "' AND 1=CONVERT(int, @@version)--"]]);
+        $this->assertSame(200, $ro->code);
+        $this->assertStringContainsString('"method": "onPost"', $ro->view);
+    }
+
+    public function testPostWithSpecialCharactersDoubleQuote(): void
+    {
+        $ro = $this->resource->post('/', ['data' => ['test' => 'value with "double quotes"']]);
+        $this->assertSame(200, $ro->code);
+        $this->assertStringContainsString('"method": "onPost"', $ro->view);
+    }
+
+    public function testPostWithSpecialCharactersBrackets(): void
+    {
+        $ro = $this->resource->post('/', ['data' => ['html' => '<script>alert("xss")</script>']]);
+        $this->assertSame(200, $ro->code);
+        $this->assertStringContainsString('"method": "onPost"', $ro->view);
+    }
+
+    public function testPostWithSpecialCharactersParentheses(): void
+    {
+        $ro = $this->resource->post('/', ['data' => ['sql' => 'SELECT * FROM users WHERE id = (1)']]);
+        $this->assertSame(200, $ro->code);
+        $this->assertStringContainsString('"method": "onPost"', $ro->view);
+    }
+
+    public function testPostWithMixedSpecialCharacters(): void
+    {
+        $ro = $this->resource->post('/', [
+            'data' => ['complex' => 'It\'s a "test" with <brackets> and (parentheses) & special $chars'],
+        ]);
+        $this->assertSame(200, $ro->code);
+        $this->assertStringContainsString('"method": "onPost"', $ro->view);
+    }
 }

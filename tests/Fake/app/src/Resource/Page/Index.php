@@ -15,9 +15,10 @@ class Index extends ResourceObject
         return $this;
     }
 
-    public function onPost()
+    /** @param array<string, mixed> $data */
+    public function onPost(array $data = [])
     {
-        $this->body = ['method' => __FUNCTION__];
+        $this->body = ['method' => __FUNCTION__, 'data' => $data];
 
         return $this;
     }

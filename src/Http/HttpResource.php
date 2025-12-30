@@ -13,15 +13,28 @@ use Koriym\PhpServer\PhpServer;
 use LogicException;
 use Override;
 
-use function exec;
+use function curl_close;
+use function curl_exec;
+use function curl_init;
+use function curl_setopt;
+use function escapeshellarg;
+use function explode;
 use function file_exists;
 use function file_put_contents;
 use function http_build_query;
 use function implode;
 use function in_array;
+use function is_string;
 use function json_encode;
 use function sprintf;
+use function strtoupper;
+use function trim;
 
+use const CURLOPT_CUSTOMREQUEST;
+use const CURLOPT_HEADER;
+use const CURLOPT_HTTPHEADER;
+use const CURLOPT_POSTFIELDS;
+use const CURLOPT_RETURNTRANSFER;
 use const FILE_APPEND;
 use const JSON_THROW_ON_ERROR;
 use const PHP_EOL;
@@ -197,9 +210,9 @@ final class HttpResource implements ResourceInterface
         $uri = ($this->queryMerger)($path, $query);
         $queryParameter = $uri->query ? '?' . http_build_query($uri->query) : '';
         $url = sprintf('%s%s%s', $this->baseUri, $uri->path, $queryParameter);
-        $curl = sprintf("curl -s -i '%s'", $url);
+        $curlCommand = sprintf('curl -s -i %s', escapeshellarg($url));
 
-        return $this->request($curl, 'get', $url);
+        return $this->request($url, 'get', $curlCommand);
     }
 
     /** @param array<string, mixed> $query */
@@ -209,27 +222,85 @@ final class HttpResource implements ResourceInterface
         $json = json_encode($uri->query, JSON_THROW_ON_ERROR);
         $url = sprintf('%s%s', $this->baseUri, $uri->path);
 
-        $curl = sprintf("curl -s -i -H 'Content-Type:application/json' -X %s -d '%s' %s", $method, $json, $url);
+        $curlCommand = sprintf(
+            'curl -s -i -H %s -X %s -d %s %s',
+            escapeshellarg('Content-Type:application/json'),
+            escapeshellarg($method),
+            escapeshellarg($json),
+            escapeshellarg($url),
+        );
 
-        return $this->request($curl, $method, $url);
+        return $this->request($url, $method, $curlCommand, $json);
     }
 
     /** @param array<string> $output */
-    public function log(array $output, string $curl): void
+    public function log(array $output, string $curlCommand): void
     {
         $responseLog = implode(PHP_EOL, $output);
-        $log = sprintf("%s\n\n%s", $curl, $responseLog) . PHP_EOL . PHP_EOL;
+        $log = sprintf("%s\n\n%s", $curlCommand, $responseLog) . PHP_EOL . PHP_EOL;
         file_put_contents($this->logFile, $log, FILE_APPEND);
     }
 
-    public function request(string $curl, string $method, string $url): ResourceObject
+    public function request(string $url, string $method, string $curlCommand, string|null $body = null): ResourceObject
     {
-        exec($curl, $output);
+        $output = $this->executeCurl($url, $method, $body);
         $uri = new ResourceUri($url);
         $uri->method = $method;
         $ro = ($this->createResponse)($uri, $output);
-        $this->log($output, $curl);
+        $this->log($output, $curlCommand);
 
         return $ro;
+    }
+
+    /**
+     * Execute HTTP request using PHP's native cURL extension
+     *
+     * @return array<string>
+     */
+    private function executeCurl(string $url, string $method, string|null $body = null): array
+    {
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return []; // @codeCoverageIgnore
+        }
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HEADER, true);
+
+        $upperMethod = strtoupper($method);
+        if ($upperMethod !== 'GET' && $upperMethod !== '') {
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $upperMethod);
+        }
+
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
+        }
+
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        if (! is_string($response)) {
+            return [];
+        }
+
+        return $this->parseResponse($response);
+    }
+
+    /**
+     * Parse cURL response into lines array
+     *
+     * @return array<string>
+     */
+    private function parseResponse(string $response): array
+    {
+        $lines = explode("\n", $response);
+        $result = [];
+        foreach ($lines as $line) {
+            $trimmed = trim($line, "\r");
+            $result[] = $trimmed;
+        }
+
+        return $result;
     }
 }
