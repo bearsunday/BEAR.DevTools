@@ -42,20 +42,11 @@ use const PHP_EOL;
 
 final class HttpResource implements ResourceInterface
 {
-    /** @var string */
-    private $logFile;
-
-    /** @var string */
-    private $baseUri;
-
-    /** @var PhpServer */
-    private static $server;
-
-    /** @var QueryMerger */
-    private $queryMerger;
-
-    /** @var CreateResponse */
-    private $createResponse;
+    private string $logFile;
+    private string $baseUri;
+    private static PhpServer $server;
+    private readonly QueryMerger $queryMerger;
+    private readonly CreateResponse $createResponse;
 
     public function __construct(string $host, string $index, string $logFile = 'php://stderr')
     {

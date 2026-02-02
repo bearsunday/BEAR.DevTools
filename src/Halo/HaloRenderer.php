@@ -18,10 +18,8 @@ use ReflectionObject;
 use function array_walk_recursive;
 use function assert;
 use function class_exists;
-use function get_class;
 use function highlight_string;
 use function is_array;
-use function is_int;
 use function is_object;
 use function is_scalar;
 use function is_string;
@@ -35,7 +33,6 @@ use function setcookie;
 use function spl_object_hash;
 use function str_contains;
 use function str_replace;
-use function strpos;
 use function time;
 
 use const JSON_PRETTY_PRINT;
@@ -56,8 +53,8 @@ final class HaloRenderer implements RenderInterface
 
     public function __construct(
         #[Named('original')]
-        private RenderInterface $renderer,
-        private TemplateLocator $templateLocator
+        private readonly RenderInterface $renderer,
+        private readonly TemplateLocator $templateLocator,
     ) {
     }
 
@@ -105,14 +102,14 @@ final class HaloRenderer implements RenderInterface
 
     private function addJsDevTools(string $body): string
     {
-        if (strpos($body, '<head>') === false) {
+        if (! str_contains($body, '<head>')) {
             return $body;
         }
 
         $bootstrapCss = '<link href="https://koriym.github.io/BEAR.Package/assets/css/bootstrap.bear.css" rel="stylesheet">' . PHP_EOL .
             '<link href="https://koriym.github.io/BEAR.Package/assets/css/bear.dev.css" rel="stylesheet">' . PHP_EOL;
-        $bootstrapCss .= is_int(strpos($body, 'glyphicons.css')) ? '' : '<link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css" rel="stylesheet">' . PHP_EOL;
-        $tabJs = is_int(strpos($body, '/assets/js/bootstrap-tab.js')) ? '' : '<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap-tab.js"></script>' . PHP_EOL;
+        $bootstrapCss .= str_contains($body, 'glyphicons.css') ? '' : '<link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css" rel="stylesheet">' . PHP_EOL;
+        $tabJs = str_contains($body, '/assets/js/bootstrap-tab.js') ? '' : '<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap-tab.js"></script>' . PHP_EOL;
         $bootstrapJs = '<link href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/united/bootstrap.min.css" rel="stylesheet">';
         $toolLoad = <<<EOT
 <!-- BEAR.Sunday dev tools -->
@@ -243,7 +240,7 @@ EOT;
                     return;
                 }
 
-                $value = '(object) ' . get_class($value);
+                $value = '(object) ' . $value::class;
             }
         );
         // @codeCoverageIgnoreEnd

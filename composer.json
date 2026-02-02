@@ -9,10 +9,9 @@
         }
     ],
     "require": {
-        "php": "^8.0",
+        "php": "^8.2",
         "ext-curl": "*",
         "ext-filter": "*",
-        "aura/sql": "^3 || ^4 || ^5 || ^6",
         "bear/app-meta": "^1.8",
         "bear/resource": "^1.31",
         "koriym/php-server": "^1.0",
