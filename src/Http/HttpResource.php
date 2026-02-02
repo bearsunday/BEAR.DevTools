@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Dev\QueryMerger;
+use BEAR\Resource\Method;
 use BEAR\Resource\RequestInterface;
 use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
@@ -132,10 +133,21 @@ final class HttpResource implements ResourceInterface
      * @codeCoverageIgnore
      */
     #[Override]
-    public function href(string $rel, array $query = []): ResourceObject
+    public function href(string $rel, array $query = [], ResourceObject|null $ro = null): ResourceObject
     {
         throw new LogicException();
     }
+
+    public function newRequest(Method $method, string $uri, array $query = []): RequestInterface
+    {
+        throw new LogicException();
+    }
+
+    public function crawl(string $uri, string $linkKey, array $query = []): ResourceObject
+    {
+        throw new LogicException();
+    }
+
 
     /**
      * {@inheritDoc}
