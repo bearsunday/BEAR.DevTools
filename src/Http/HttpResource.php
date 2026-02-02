@@ -148,7 +148,6 @@ final class HttpResource implements ResourceInterface
         throw new LogicException();
     }
 
-
     /**
      * {@inheritDoc}
      */
