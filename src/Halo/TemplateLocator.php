@@ -12,7 +12,6 @@ use Ray\Aop\WeavedInterface;
 use Ray\Di\Di\Named;
 
 use function file_exists;
-use function get_class;
 use function sprintf;
 use function str_replace;
 use function strlen;
@@ -25,13 +24,13 @@ final class TemplateLocator
      * @param array<string> $qiqPaths
      */
     public function __construct(
-        private AbstractAppMeta $meta,
+        private readonly AbstractAppMeta $meta,
         #[TwigPaths]
-        private array $twigPaths = [],
+        private readonly array $twigPaths = [],
         #[Named('qiq_paths')]
-        private array $qiqPaths = [],
+        private readonly array $qiqPaths = [],
         #[Named('qiq_extension')]
-        private string $qiqExt = '',
+        private readonly string $qiqExt = '',
     ) {
     }
 
@@ -76,6 +75,6 @@ final class TemplateLocator
             // @codeCoverageIgnoreEnd
         }
 
-        return get_class($ro);
+        return $ro::class;
     }
 }

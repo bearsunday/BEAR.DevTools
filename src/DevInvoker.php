@@ -6,7 +6,7 @@ namespace BEAR\Dev;
 
 use BEAR\Resource\AbstractRequest;
 use BEAR\Resource\InvokerInterface;
-use BEAR\Resource\Request;
+use BEAR\Resource\Method;
 use BEAR\Resource\ResourceObject;
 use Override;
 use Ray\Aop\WeavedInterface;
@@ -16,7 +16,6 @@ use XHProfRuns_Default;
 use function assert;
 use function class_exists;
 use function extension_loaded;
-use function get_class;
 use function is_array;
 use function is_int;
 use function is_object;
@@ -49,7 +48,7 @@ final class DevInvoker implements InvokerInterface
 
     public function __construct(
         #[Named('original')]
-        private InvokerInterface $invoker
+        private readonly InvokerInterface $invoker,
     ) {
     }
 
@@ -58,7 +57,7 @@ final class DevInvoker implements InvokerInterface
     {
         $resource = $this->getRo($request);
 
-        if ($request->method === Request::OPTIONS || $request->method === Request::HEAD) {
+        if ($request->method === Method::OPTIONS || $request->method === Method::HEAD) {
             // OPTIONS and HEAD requests are not processed by DevInvoker
             return $this->invoker->invoke($request); // @codeCoverageIgnore
         }
@@ -131,7 +130,7 @@ final class DevInvoker implements InvokerInterface
             $interceptorNames = [];
             foreach ($interceptors as $interceptor) {
                 assert(is_object($interceptor));
-                $interceptorNames[] = get_class($interceptor);
+                $interceptorNames[] = $interceptor::class;
             }
 
             $interceptorInfo[$methodKey] = $interceptorNames;

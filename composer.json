@@ -9,17 +9,13 @@
         }
     ],
     "require": {
-        "php": "^8.0",
+        "php": "^8.2",
         "ext-curl": "*",
-        "ext-filter": "*",
-        "aura/sql": "^3 || ^4 || ^5 || ^6",
         "bear/app-meta": "^1.8",
-        "bear/resource": "^1.17",
+        "bear/resource": "^1.31",
         "koriym/php-server": "^1.0",
-        "psr/log": "^1 || ^2 || ^3",
         "ray/aop": "^2.14",
-        "ray/di": "^2.14",
-        "symfony/process": "^v5.4 || ^v6.4 || ^v7.0"
+        "ray/di": "^2.14"
     },
     "require-dev": {
         "bamarni/composer-bin-plugin": "^1.4",
@@ -31,12 +27,13 @@
     },
     "autoload": {
         "psr-4": {
-            "BEAR\\Dev\\": ["src/", "src-deprecated/"]
+            "BEAR\\Dev\\": ["src/"]
         }
     },
     "autoload-dev": {
         "psr-4": {
             "BEAR\\Dev\\": [
+                "src-deprecated/",
                 "tests/Fake"
             ],
             "MyVendor\\MyProject\\": [

@@ -7,16 +7,11 @@ namespace BEAR\Dev;
 /** @psalm-immutable */
 final class Uri
 {
-    /** @var string  */
-    public $path;
-
-    /** @var array<string, mixed> */
-    public $query;
-
     /** @param  array<string, mixed> $query */
-    public function __construct(string $path, array $query)
-    {
-        $this->path = $path;
-        $this->query = $query;
+    public function __construct(
+        public readonly string $path,
+        /** @var array<string, mixed> */
+        public readonly array $query,
+    ) {
     }
 }
