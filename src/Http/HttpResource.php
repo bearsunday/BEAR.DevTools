@@ -132,12 +132,16 @@ final class HttpResource implements ResourceInterface
     /** @param array<string, mixed> $query */
     public function newRequest(Method $method, string $uri, array $query = []): RequestInterface
     {
+        unset($method, $uri, $query);
+
         throw new LogicException();
     }
 
     /** @param array<string, mixed> $query */
     public function crawl(string $uri, string $linkKey, array $query = []): ResourceObject
     {
+        unset($uri, $linkKey, $query);
+
         throw new LogicException();
     }
 
