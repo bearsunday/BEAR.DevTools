@@ -129,11 +129,13 @@ final class HttpResource implements ResourceInterface
         throw new LogicException();
     }
 
+    /** @param array<string, mixed> $query */
     public function newRequest(Method $method, string $uri, array $query = []): RequestInterface
     {
         throw new LogicException();
     }
 
+    /** @param array<string, mixed> $query */
     public function crawl(string $uri, string $linkKey, array $query = []): ResourceObject
     {
         throw new LogicException();

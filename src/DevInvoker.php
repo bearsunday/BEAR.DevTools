@@ -6,7 +6,7 @@ namespace BEAR\Dev;
 
 use BEAR\Resource\AbstractRequest;
 use BEAR\Resource\InvokerInterface;
-use BEAR\Resource\Request;
+use BEAR\Resource\Method;
 use BEAR\Resource\ResourceObject;
 use Override;
 use Ray\Aop\WeavedInterface;
@@ -57,7 +57,7 @@ final class DevInvoker implements InvokerInterface
     {
         $resource = $this->getRo($request);
 
-        if ($request->method === Request::OPTIONS || $request->method === Request::HEAD) {
+        if ($request->method === Method::OPTIONS || $request->method === Method::HEAD) {
             // OPTIONS and HEAD requests are not processed by DevInvoker
             return $this->invoker->invoke($request); // @codeCoverageIgnore
         }
