@@ -27,12 +27,13 @@
     },
     "autoload": {
         "psr-4": {
-            "BEAR\\Dev\\": ["src/", "src-deprecated/"]
+            "BEAR\\Dev\\": ["src/"]
         }
     },
     "autoload-dev": {
         "psr-4": {
             "BEAR\\Dev\\": [
+                "src-deprecated/",
                 "tests/Fake"
             ],
             "MyVendor\\MyProject\\": [
