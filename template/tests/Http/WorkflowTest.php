@@ -4,26 +4,18 @@ declare(strict_types=1);
 
 namespace BEAR\Skeleton\Http;
 
-use BEAR\Dev\Http\BuiltinServerStartTrait;
-use BEAR\Resource\ResourceObject;
+use BEAR\Dev\Http\HttpResource;
+use BEAR\Resource\ResourceInterface;
 use BEAR\Skeleton\Hypermedia\WorkflowTest as Workflow;
-use BEAR\Skeleton\Injector;
 
 class WorkflowTest extends Workflow
 {
-    use BuiltinServerStartTrait;
-
-    protected function setUp(): void
+    protected function newResource(): ResourceInterface
     {
-        $_SERVER['Authorization'] = '_secret_token_';
-        $this->resource = $this->getHttpResourceClient(Injector::getInstance('app'), self::class);
-    }
-
-    public function testIndex(): ResourceObject
-    {
-        $index = $this->resource->get($this->httpHost . '/');
-        $this->assertSame(200, $index->code);
-
-        return $index;
+        return new HttpResource(
+            '127.0.0.1:8088',
+            __DIR__ . '/index.php',
+            __DIR__ . '/log',
+        );
     }
 }

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
+use BEAR\Resource\ResourceInterface;
+use BEAR\Resource\ResourceObject;
 use BEAR\Resource\Uri;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 use function assert;
@@ -85,6 +88,21 @@ class HttpResourceTest extends TestCase
         $this->assertFileExists(__DIR__ . '/log/test-href-follows-hal-link-with-get.log');
     }
 
+    public function testWorkflowFollowUsesHalHrefGet(): void
+    {
+        $index = __DIR__ . '/index.php';
+        assert(file_exists($index));
+        $resource = new HttpResource('127.0.0.1:8081', $index, __DIR__ . '/log');
+        $ro = $resource->get('/');
+
+        $workflow = new AbstractWorkflowTestHarness('runTest');
+        $workflow->setResource($resource);
+
+        $next = $workflow->followPublic($ro, 'next');
+        $this->assertSame(200, $next->code);
+        $this->assertStringContainsString('"page": "linked"', $next->view);
+    }
+
     public function testHrefThrowsHalLinkNotFoundExceptionForMissingHalLink(): void
     {
         $index = __DIR__ . '/index.php';
@@ -145,5 +163,23 @@ class HttpResourceTest extends TestCase
         ]);
         $this->assertSame(200, $ro->code);
         $this->assertStringContainsString('"method": "onPost"', $ro->view);
+    }
+}
+
+final class AbstractWorkflowTestHarness extends AbstractWorkflowTest
+{
+    public function setResource(ResourceInterface $resource): void
+    {
+        $this->resource = $resource;
+    }
+
+    public function followPublic(ResourceObject $response, string $rel): ResourceObject
+    {
+        return $this->follow($response, $rel);
+    }
+
+    protected function newResource(): ResourceInterface
+    {
+        throw new LogicException();
     }
 }
