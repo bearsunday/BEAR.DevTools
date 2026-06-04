@@ -6,9 +6,8 @@
 /.phpcs-cache
 /.php_cs.cache
 /vendor-bin/tools/vendor/
-tests/Http/log/HttpResourceClientTest.log
+tests/Http/log/*.log
 coverage.xml
-tests/Http/log/app.log
 .idea
 !.idea/
 .idea/*
