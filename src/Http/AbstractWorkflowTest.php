@@ -9,7 +9,6 @@ use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
 use PHPUnit\Framework\TestCase;
 
-use function is_string;
 use function str_starts_with;
 use function strtolower;
 
@@ -21,7 +20,8 @@ abstract class AbstractWorkflowTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->resource = self::$resources[static::class] ??= $this->newResource();
+        $class = static::class;
+        $this->resource = self::$resources[$class] ??= $this->newResource();
     }
 
     public static function tearDownAfterClass(): void
@@ -73,10 +73,6 @@ abstract class AbstractWorkflowTest extends TestCase
     protected function header(ResourceObject $response, string $name): string|null
     {
         foreach ($response->headers as $header => $value) {
-            if (! is_string($header) || ! is_string($value)) {
-                continue;
-            }
-
             if (strtolower($header) !== strtolower($name)) {
                 continue;
             }

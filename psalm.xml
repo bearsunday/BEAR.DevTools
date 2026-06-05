@@ -16,5 +16,7 @@
         <UnusedClass errorLevel="suppress" />
         <PossiblyUnusedMethod errorLevel="suppress" />
         <MissingOverrideAttribute errorLevel="suppress" />
+        <!-- Psalm 6.15 false-positive: #[Override] on methods is reported as "cannot be used on a function" -->
+        <InvalidAttribute errorLevel="suppress" />
     </issueHandlers>
 </psalm>
