@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace MyVendor\MyProject\Resource\Page;
 
+use BEAR\Resource\Annotation\Link;
 use BEAR\Resource\ResourceObject;
 
 class Index extends ResourceObject
 {
+    #[Link(rel: 'next', href: '/linked')]
     public function onGet()
     {
         $this->body = ['method' => __FUNCTION__];

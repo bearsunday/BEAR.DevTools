@@ -12,6 +12,7 @@ use function array_key_exists;
 use function array_pop;
 use function array_shift;
 use function count;
+use function end;
 use function implode;
 use function json_decode;
 use function preg_match;
@@ -79,8 +80,7 @@ final class CreateResponse
         $keyedHeader = [];
         array_pop($headers);
         foreach ($headers as $header) {
-            preg_match('/(.+):\s(.+)/', $header, $matched);
-            if (! array_key_exists(1, $matched) || ! array_key_exists(2, $matched)) {
+            if (preg_match('/(.+):\s(.+)/', $header, $matched) !== 1) {
                 // Skip malformed headers
                 continue;
             }
@@ -94,7 +94,7 @@ final class CreateResponse
     /** @param array<string> $body */
     private function getJsonView(array $body): string
     {
-        if (count($body) > 0) {
+        if (count($body) > 0 && end($body) === '') {
             array_pop($body);
         }
 

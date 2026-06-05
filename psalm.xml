@@ -16,5 +16,14 @@
         <UnusedClass errorLevel="suppress" />
         <PossiblyUnusedMethod errorLevel="suppress" />
         <MissingOverrideAttribute errorLevel="suppress" />
+        <!-- Psalm 6.15 false-positive: #[Override] on methods is reported as "cannot be used on a function" -->
+        <InvalidAttribute>
+            <errorLevel type="suppress">
+                <file name="src/DevInvoker.php" />
+                <file name="src/Halo/HaloModule.php" />
+                <file name="src/Halo/HaloRenderer.php" />
+                <file name="src/Http/HttpResource.php" />
+            </errorLevel>
+        </InvalidAttribute>
     </issueHandlers>
 </psalm>
