@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Http;
 
+use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
 use BEAR\Resource\NullResourceObject;
+use BEAR\Resource\Uri;
 use PHPUnit\Framework\TestCase;
 
 use function assert;
@@ -20,7 +22,7 @@ class HttpResourceTest extends TestCase
     {
         $index = dirname(__DIR__) . '/Fake/app/public/index.php';
         assert(file_exists($index));
-        $this->resource = new HttpResource('127.0.0.1:8080', $index, __DIR__ . '/log/app.log');
+        $this->resource = new HttpResource('127.0.0.1:8080', $index, __DIR__ . '/log');
     }
 
     public function testOnGet(): void
@@ -112,6 +114,47 @@ class HttpResourceTest extends TestCase
         $ro = $resource->get('http://127.0.0.1:8080/');
         $this->assertSame(200, $ro->code);
         $this->assertStringContainsString('"method": "onGet"', $ro->view);
+    }
+
+    public function testHrefFollowsHalLinkWithGet(): void
+    {
+        $index = __DIR__ . '/index.php';
+        assert(file_exists($index));
+        $resource = new HttpResource('127.0.0.1:8081', $index, __DIR__ . '/log');
+
+        $ro = $resource->get('/');
+        $this->assertSame(200, $ro->code);
+        $this->assertStringContainsString('"_links"', $ro->view);
+
+        $next = $resource->href('next', [], $ro);
+        $this->assertSame(200, $next->code);
+        $this->assertStringContainsString('"page": "linked"', $next->view);
+        $this->assertFileExists(__DIR__ . '/log/test-href-follows-hal-link-with-get.log');
+    }
+
+    public function testHrefThrowsHalLinkNotFoundExceptionForMissingHalLink(): void
+    {
+        $index = __DIR__ . '/index.php';
+        assert(file_exists($index));
+        $resource = new HttpResource('127.0.0.1:8081', $index, __DIR__ . '/log');
+        $ro = $resource->get('/');
+
+        $this->expectException(HalLinkNotFoundException::class);
+        $resource->href('missing', [], $ro);
+    }
+
+    public function testCreateResponseKeepsSingleLineJsonBody(): void
+    {
+        $uri = new Uri('http://127.0.0.1:8080/');
+        $ro = (new CreateResponse())($uri, [
+            'HTTP/1.1 200 OK',
+            'Content-Type: application/json',
+            '',
+            '{"method":"onGet"}',
+        ]);
+
+        $this->assertSame('{"method":"onGet"}', $ro->view);
+        $this->assertSame('onGet', $ro->body['method']);
     }
 
     public function testPostWithSpecialCharactersSingleQuote(): void

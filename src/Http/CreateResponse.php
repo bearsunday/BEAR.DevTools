@@ -12,6 +12,7 @@ use function array_key_exists;
 use function array_pop;
 use function array_shift;
 use function count;
+use function end;
 use function implode;
 use function json_decode;
 use function preg_match;
@@ -93,7 +94,7 @@ final class CreateResponse
     /** @param array<string> $body */
     private function getJsonView(array $body): string
     {
-        if (count($body) > 0) {
+        if (count($body) > 0 && end($body) === '') {
             array_pop($body);
         }
 
