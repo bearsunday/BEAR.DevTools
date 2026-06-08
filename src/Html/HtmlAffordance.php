@@ -26,7 +26,12 @@ final readonly class HtmlAffordance
 
     private function containsToken(string $value, string $token): bool
     {
-        $tokens = preg_split('/\s+/', trim($value));
+        $value = trim($value);
+        if ($value === '' || $token === '') {
+            return false;
+        }
+
+        $tokens = preg_split('/\s+/', $value);
         if (! is_array($tokens)) {
             return false;
         }

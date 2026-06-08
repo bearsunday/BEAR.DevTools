@@ -38,6 +38,13 @@ final class HtmlLinkAuditorTest extends TestCase
         $this->assertSame([], $this->logger->warnings);
     }
 
+    public function testEmptyTokenDoesNotMatchEmptyRelOrClass(): void
+    {
+        $affordance = new HtmlAffordance('/next', 'get');
+
+        $this->assertFalse($affordance->hasToken(''));
+    }
+
     public function testUnsafeMethodForm(): void
     {
         $this->auditor->audit(
