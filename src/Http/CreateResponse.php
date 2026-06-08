@@ -79,8 +79,7 @@ final class CreateResponse
         $keyedHeader = [];
         array_pop($headers);
         foreach ($headers as $header) {
-            preg_match('/(.+):\s(.+)/', $header, $matched);
-            if (! array_key_exists(1, $matched) || ! array_key_exists(2, $matched)) {
+            if (preg_match('/(.+):\s(.+)/', $header, $matched) !== 1) {
                 // Skip malformed headers
                 continue;
             }
