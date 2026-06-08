@@ -35,7 +35,9 @@ final class ErrorLogHtmlLinkAuditLoggerTest extends TestCase
             $this->assertStringNotContainsString("bad\nreason", $log);
         } finally {
             ini_set('error_log', $previousLog === false ? '' : $previousLog);
-            unlink($logFile);
+            if (is_string($logFile)) {
+                unlink($logFile);
+            }
         }
     }
 }
