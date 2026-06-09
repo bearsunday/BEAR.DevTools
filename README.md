@@ -46,15 +46,21 @@ class DevModule extends AbstractModule
 
 **Features:**
 - Automatic local server startup
-- HTTP request logging to file
-- Full HTTP method support (GET, POST, PUT, DELETE, etc.)
+- HTTP request logging (to STDERR, a single file, or per-test files)
+- Full HTTP method support (GET, POST, PUT, PATCH, DELETE)
+- HAL link following with `href()`
 - Request/response capture for testing workflows
 
 ```php
 use BEAR\Dev\Http\HttpResource;
 
-// Start server and create HTTP client
-$resource = new HttpResource('127.0.0.1:8099', '/path/to/index.php', '/path/to/curl.log');
+// Start the built-in server and create an HTTP client.
+// The third argument is the log destination and is optional
+// (defaults to 'php://stderr'):
+//   - 'php://stderr'       : write logs to STDERR (default)
+//   - '/path/to/file.log'  : write every request to a single file
+//   - '/path/to/log'       : a directory; one '<test-name>.log' per test method
+$resource = new HttpResource('127.0.0.1:8080', '/path/to/public/index.php', __DIR__ . '/log');
 
 // Make HTTP requests
 $ro = $resource->get('/users');
@@ -64,12 +70,26 @@ $ro = $resource->post('/users', ['name' => 'John', 'email' => 'john@example.com'
 assert($ro->code === 201);
 ```
 
+#### Following HAL links
+
+`href()` follows a HAL `_links` relation from a response with a `GET` request:
+
+```php
+$index = $resource->get('/');
+// {"_links": {"next": {"href": "/users"}}}
+
+$users = $resource->href('next', [], $index);
+assert($users->code === 200);
+```
+
+A `HalLinkNotFoundException` is thrown when the relation or its `href` is missing.
+
 #### HTTP Access Log
 
-All HTTP requests made through `HttpResource` are automatically logged with full curl command equivalents:
+Each request is logged with its equivalent `curl` command followed by the raw response:
 
 ```bash
-curl -s -i 'http://127.0.0.1:8099/users'
+curl -s -i 'http://127.0.0.1:8080/users'
 
 HTTP/1.1 200 OK
 Content-Type: application/hal+json
