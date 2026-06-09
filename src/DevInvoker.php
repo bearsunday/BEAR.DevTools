@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace BEAR\Dev;
 
+use BackedEnum;
 use BEAR\Resource\AbstractRequest;
 use BEAR\Resource\InvokerInterface;
-use BEAR\Resource\Method;
 use BEAR\Resource\ResourceObject;
 use Override;
 use Ray\Aop\WeavedInterface;
@@ -19,6 +19,7 @@ use function extension_loaded;
 use function is_array;
 use function is_int;
 use function is_object;
+use function is_scalar;
 use function is_string;
 use function json_encode;
 use function memory_get_usage;
@@ -57,12 +58,26 @@ final class DevInvoker implements InvokerInterface
     {
         $resource = $this->getRo($request);
 
-        if ($request->method === Method::OPTIONS || $request->method === Method::HEAD) {
+        $method = $this->methodValue($request->method);
+        if ($method === 'options' || $method === 'head') {
             // OPTIONS and HEAD requests are not processed by DevInvoker
             return $this->invoker->invoke($request); // @codeCoverageIgnore
         }
 
         return $this->devInvoke($resource, $request);
+    }
+
+    private function methodValue(mixed $method): string
+    {
+        if ($method instanceof BackedEnum) {
+            return (string) $method->value;
+        }
+
+        if (is_scalar($method)) {
+            return (string) $method;
+        }
+
+        return '';
     }
 
     private function devInvoke(ResourceObject $resource, AbstractRequest $request): ResourceObject

@@ -6,7 +6,6 @@ namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
 use BEAR\Dev\QueryMerger;
-use BEAR\Resource\Method;
 use BEAR\Resource\RequestInterface;
 use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
@@ -15,7 +14,6 @@ use Koriym\PhpServer\PhpServer;
 use LogicException;
 use Override;
 
-use function array_key_exists;
 use function curl_exec;
 use function curl_init;
 use function curl_setopt;
@@ -27,8 +25,6 @@ use function file_put_contents;
 use function http_build_query;
 use function implode;
 use function in_array;
-use function is_array;
-use function is_object;
 use function is_string;
 use function json_encode;
 use function preg_replace;
@@ -57,6 +53,7 @@ final class HttpResource implements ResourceInterface
     private static PhpServer $server;
     private readonly QueryMerger $queryMerger;
     private readonly CreateResponse $createResponse;
+    private readonly HrefExtractor $hrefExtractor;
 
     public function __construct(string $host, string $index, string $logPath = 'php://stderr')
     {
@@ -66,6 +63,7 @@ final class HttpResource implements ResourceInterface
         $this->startServer($host, $index);
         $this->queryMerger = new QueryMerger();
         $this->createResponse = new CreateResponse();
+        $this->hrefExtractor = new HrefExtractor();
     }
 
     private function startServer(string $host, string $index): void
@@ -74,7 +72,7 @@ final class HttpResource implements ResourceInterface
         static $started = [];
 
         $id = $host . $index;
-        if (in_array($id, $started)) {
+        if (in_array($id, $started, true)) {
             return;
         }
 
@@ -122,27 +120,13 @@ final class HttpResource implements ResourceInterface
     #[Override]
     public function href(string $rel, array $query = [], ResourceObject|null $ro = null): ResourceObject
     {
-        if ($ro === null || ! is_array($ro->body)) {
-            throw new HalLinkNotFoundException('A source ResourceObject with HAL links is required.');
+        if (! $ro instanceof ResourceObject) {
+            throw new HalLinkNotFoundException('A source ResourceObject is required to follow a link.');
         }
 
-        $links = $ro->body['_links'] ?? null;
-        if (is_object($links)) {
-            $links = (array) $links;
-        }
-
-        if (! is_array($links) || ! array_key_exists($rel, $links)) {
-            throw new HalLinkNotFoundException(sprintf('HAL link rel `%s` is not available.', $rel));
-        }
-
-        $link = $links[$rel];
-        if (is_object($link)) {
-            $link = (array) $link;
-        }
-
-        $href = is_array($link) ? ($link['href'] ?? null) : null;
-        if (! is_string($href)) {
-            throw new HalLinkNotFoundException(sprintf('HAL link rel `%s` has no href.', $rel));
+        $href = $this->hrefExtractor->href($rel, $ro);
+        if ($href === null) {
+            throw new HalLinkNotFoundException(sprintf('Link rel `%s` is not available.', $rel));
         }
 
         return $this->get($href, $query);
@@ -150,7 +134,7 @@ final class HttpResource implements ResourceInterface
 
     /** @param array<string, mixed> $query */
     #[Override]
-    public function newRequest(Method $method, string $uri, array $query = []): RequestInterface
+    public function newRequest(object|string $method, string $uri, array $query = []): RequestInterface
     {
         unset($method, $uri, $query);
 

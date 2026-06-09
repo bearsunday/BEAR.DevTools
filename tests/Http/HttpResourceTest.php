@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
+use BEAR\Resource\NullResourceObject;
 use BEAR\Resource\Uri;
 use PHPUnit\Framework\TestCase;
 
@@ -58,6 +59,52 @@ class HttpResourceTest extends TestCase
         $ro = $this->resource->delete('/');
         $this->assertSame(200, $ro->code);
         $this->assertStringContainsString('"method": "onDelete"', $ro->view);
+    }
+
+    public function testHrefFollowsHalLinkFirst(): void
+    {
+        $ro = new NullResourceObject();
+        $ro->body = [
+            '_links' => [
+                'goHome' => ['href' => '/'],
+            ],
+        ];
+        $ro->view = '<a href="/other" class="goHome">Other</a>';
+        $ro->headers = ['Link' => '</header>; rel="goHome"'];
+
+        $next = $this->resource->href('goHome', [], $ro);
+
+        $this->assertSame(200, $next->code);
+        $this->assertStringContainsString('"method": "onGet"', $next->view);
+        $this->assertSame('http://127.0.0.1:8080/', (string) $next->uri);
+    }
+
+    public function testHrefFollowsSemanticHtmlLinkBeforeHeader(): void
+    {
+        $ro = new NullResourceObject();
+        $ro->body = [];
+        $ro->view = '<a href="/" class="goHome">Home</a>';
+        $ro->headers = ['Link' => '</header>; rel="goHome"'];
+
+        $next = $this->resource->href('goHome', [], $ro);
+
+        $this->assertSame(200, $next->code);
+        $this->assertStringContainsString('"method": "onGet"', $next->view);
+        $this->assertSame('http://127.0.0.1:8080/', (string) $next->uri);
+    }
+
+    public function testHrefFallsBackToLinkHeader(): void
+    {
+        $ro = new NullResourceObject();
+        $ro->body = [];
+        $ro->view = '<a href="/other">Other</a>';
+        $ro->headers = ['Link' => '</>; rel="goHome"'];
+
+        $next = $this->resource->href('goHome', [], $ro);
+
+        $this->assertSame(200, $next->code);
+        $this->assertStringContainsString('"method": "onGet"', $next->view);
+        $this->assertSame('http://127.0.0.1:8080/', (string) $next->uri);
     }
 
     public function testStdErrLog(): void
