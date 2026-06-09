@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Document `AbstractWorkflowTest` as the base contract for transport-agnostic workflow tests.
 - Add `linkHref()` and `bodyString()` helpers to `AbstractWorkflowTest`.
 
+### Changed
+- Keep PHPUnit as a direct dependency while `AbstractWorkflowTest` is shipped as a public test base class.
+
 ### Fixed
 - Harden `HrefExtractor` attribute parsing and semantic HTML link discovery.
 
