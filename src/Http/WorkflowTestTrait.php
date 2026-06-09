@@ -12,21 +12,32 @@ use PHPUnit\Framework\TestCase;
 use function str_starts_with;
 use function strtolower;
 
-abstract class AbstractWorkflowTest extends TestCase
+/**
+ * Hypermedia workflow testing helpers.
+ *
+ * Use this trait in a PHPUnit test that drives a BEAR.Sunday resource client,
+ * implement {@see newResource()}, then navigate with {@see follow()} (safe HAL
+ * link GET) and {@see followLocation()} (GET the `Location` after an unsafe
+ * transition). The same test body can run against both an in-process resource
+ * and {@see HttpResource} by overriding `newResource()`.
+ *
+ * @psalm-require-extends TestCase
+ */
+trait WorkflowTestTrait
 {
     /** @var array<class-string, ResourceInterface> */
-    private static array $resources = [];
+    private static array $workflowResources = [];
     protected ResourceInterface $resource;
 
     protected function setUp(): void
     {
         $class = static::class;
-        $this->resource = self::$resources[$class] ??= $this->newResource();
+        $this->resource = self::$workflowResources[$class] ??= $this->newResource();
     }
 
     public static function tearDownAfterClass(): void
     {
-        unset(self::$resources[static::class]);
+        unset(self::$workflowResources[static::class]);
     }
 
     abstract protected function newResource(): ResourceInterface;

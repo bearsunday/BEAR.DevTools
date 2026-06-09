@@ -4,3 +4,8 @@ parameters:
   level: max
   paths:
     - src
+  ignoreErrors:
+    # Shipped test-helper trait; only used from test suites, not from src.
+    -
+      identifier: trait.unused
+      path: src/Http/WorkflowTestTrait.php

@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace BEAR\Skeleton\Hypermedia;
 
-use BEAR\Dev\Http\AbstractWorkflowTest;
+use BEAR\Dev\Http\WorkflowTestTrait;
 use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
 use BEAR\Skeleton\Injector;
+use PHPUnit\Framework\TestCase;
 
 use function assert;
 
-class WorkflowTest extends AbstractWorkflowTest
+class WorkflowTest extends TestCase
 {
+    use WorkflowTestTrait;
+
     protected function newResource(): ResourceInterface
     {
         $resource = Injector::getInstance('app')->getInstance(ResourceInterface::class);

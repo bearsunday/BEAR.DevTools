@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Resource\ResourceInterface;
+use PHPUnit\Framework\TestCase;
 
 use function assert;
 use function file_exists;
 
-class WorkflowFollowTest extends AbstractWorkflowTest
+class WorkflowFollowTest extends TestCase
 {
+    use WorkflowTestTrait;
+
     protected function newResource(): ResourceInterface
     {
         $index = __DIR__ . '/index.php';
