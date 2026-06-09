@@ -13,6 +13,7 @@ use function is_array;
 use function is_string;
 use function preg_match;
 use function preg_match_all;
+use function preg_quote;
 use function preg_split;
 use function strtolower;
 use function trim;
@@ -61,7 +62,7 @@ final class HrefExtractor
             return null;
         }
 
-        if (preg_match_all('/<(?:a|area|link)\b(?P<attrs>[^>]*)>/i', $view, $matches) !== 1) {
+        if (preg_match_all('/<(?:a|area|link)\b(?P<attrs>[^>]*)>/i', $view, $matches) === false) {
             return null;
         }
 
@@ -122,22 +123,33 @@ final class HrefExtractor
 
     private function attribute(string $attrs, string $name): string|null
     {
-        if (preg_match('/\b' . $name . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
+        if (preg_match('/\b' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
             return null;
         }
 
-        $value = $match[1] ?? $match[2] ?? $match[3] ?? '';
+        $value = $match[1];
+        if ($value === '' && isset($match[2])) {
+            $value = $match[2];
+        }
+
+        if ($value === '' && isset($match[3])) {
+            $value = $match[3];
+        }
 
         return html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
     }
 
     private function linkHeaderParam(string $attrs, string $name): string|null
     {
-        if (preg_match('/(?:^|;)\s*' . $name . '\s*=\s*(?:"([^"]*)"|([^;\s]+))/i', $attrs, $match) !== 1) {
+        if (preg_match('/(?:^|;)\s*' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|([^;\s]+))/i', $attrs, $match) !== 1) {
             return null;
         }
 
-        return $match[1] ?? $match[2] ?? null;
+        if ($match[1] !== '') {
+            return $match[1];
+        }
+
+        return $match[2] ?? null;
     }
 
     private function containsToken(string $value, string $token): bool

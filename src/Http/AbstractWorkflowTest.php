@@ -9,9 +9,18 @@ use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
 use PHPUnit\Framework\TestCase;
 
+use function sprintf;
 use function str_starts_with;
 use function strtolower;
 
+/**
+ * Base contract for transport-agnostic hypermedia workflow tests.
+ *
+ * A concrete workflow test writes the scenario once against ResourceInterface.
+ * An HTTP workflow test can then extend that concrete test and override only
+ * newResource() with HttpResource, proving the same rel-driven scenario across
+ * in-process and HTTP transports.
+ */
 abstract class AbstractWorkflowTest extends TestCase
 {
     /** @var array<class-string, ResourceInterface> */
@@ -47,6 +56,25 @@ abstract class AbstractWorkflowTest extends TestCase
         return $next;
     }
 
+    /**
+     * Resolves a link relation without issuing a request.
+     *
+     * Use this for unsafe transitions (for example POST/PUT/DELETE) where the
+     * workflow needs the target URI but must choose the HTTP method explicitly.
+     */
+    protected function linkHref(ResourceObject $response, string $rel): string
+    {
+        if ($response->view === null) {
+            // Rendering materializes representation-driven headers such as Link.
+            (string) $response;
+        }
+
+        $href = (new HrefExtractor())->href($rel, $response);
+        $this->assertIsString($href, sprintf('Link rel `%s` should be present in the representation.', $rel));
+
+        return $this->resourceUriForLocation($href);
+    }
+
     protected function followLocation(ResourceObject $response, string|null $expectedLocation = null): ResourceObject
     {
         $location = $this->header($response, 'Location');
@@ -68,6 +96,14 @@ abstract class AbstractWorkflowTest extends TestCase
         $this->assertArrayHasKey($key, $body);
 
         return $body[$key];
+    }
+
+    protected function bodyString(ResourceObject $response, string $key): string
+    {
+        $value = $this->bodyValue($response, $key);
+        $this->assertIsString($value, sprintf('Expected body key `%s` to be a string.', $key));
+
+        return $value;
     }
 
     protected function header(ResourceObject $response, string $name): string|null

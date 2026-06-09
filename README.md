@@ -76,9 +76,65 @@ Content-Type: application/hal+json
 ...
 ```
 
+### Workflow Testing
+
+`AbstractWorkflowTest` is the base contract for rel-driven workflow tests. Write
+the workflow once against `ResourceInterface`, then run the same scenario over
+HTTP by extending the concrete workflow test and overriding only `newResource()`
+with `HttpResource`.
+
+```php
+use BEAR\Dev\Http\AbstractWorkflowTest;
+use BEAR\Resource\ResourceInterface;
+use BEAR\Resource\ResourceObject;
+use MyVendor\MyProject\Injector;
+
+use function assert;
+
+class WorkflowTest extends AbstractWorkflowTest
+{
+    protected function newResource(): ResourceInterface
+    {
+        $resource = Injector::getInstance('app')->getInstance(ResourceInterface::class);
+        assert($resource instanceof ResourceInterface);
+
+        return $resource;
+    }
+
+    public function testIndex(): ResourceObject
+    {
+        $index = $this->resource->get('/index');
+        $this->assertSame(200, $index->code);
+
+        return $index;
+    }
+
+    /** @depends testIndex */
+    public function testNext(ResourceObject $response): ResourceObject
+    {
+        return $this->follow($response, 'next');
+    }
+}
+```
+
+```php
+use BEAR\Dev\Http\HttpResource;
+use BEAR\Resource\ResourceInterface;
+use MyVendor\MyProject\Hypermedia\WorkflowTest as Workflow;
+
+class WorkflowTest extends Workflow
+{
+    protected function newResource(): ResourceInterface
+    {
+        return new HttpResource('127.0.0.1:8088', __DIR__ . '/index.php', __DIR__ . '/log');
+    }
+}
+```
+
 ## Requirements
 
-- PHP 8.0 or higher
+- PHP 8.2 or higher
+- ext-curl
 - BEAR.Sunday framework
 
 ## Development
@@ -92,4 +148,3 @@ This package includes comprehensive development tools:
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE) for more information.
-
