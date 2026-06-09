@@ -2,23 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0.html),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.3.0] - 2026-06-06
 
 ### Added
 - `HttpResource::href()` follows a HAL `_links` relation with a `GET` request, throwing `HalLinkNotFoundException` when the relation or its `href` is missing
-- `WorkflowTestTrait` for hypermedia workflow tests (`follow()`, `followLocation()`, `bodyValue()`, `header()`); the same scenario can run in-process or over HTTP by overriding `newResource()`
+- `AbstractWorkflowTest` for transport-agnostic hypermedia workflow tests (`follow()`, `linkHref()`, `followLocation()`, `bodyValue()`, `bodyString()`, `header()`); the same scenario can run in-process and over HTTP by overriding `newResource()`
 - Per-test HTTP access logs: pass a log directory to `HttpResource` to write one `<test-name>.log` per test method
 - PHP 8.5 support
 
 ### Changed
 - Raised the minimum PHP version to 8.2
 - Bumped the `bear/resource` requirement to `^1.31`
-- Moved `phpunit/phpunit` to `require`, since the package ships `WorkflowTestTrait` for use in consumer test suites
+- Keep `phpunit/phpunit` in `require`, since the package ships `AbstractWorkflowTest` as a public test base class
 - Modernized the codebase for PHP 8.2+ (constructor property promotion, readonly properties)
 - Moved `src-deprecated/` from autoload to autoload-dev
+
+### Fixed
+- Harden `HrefExtractor` attribute parsing and semantic HTML link discovery
 
 ### Removed
 - Unused dependencies: `ext-filter`, `psr/log`, `symfony/process`
