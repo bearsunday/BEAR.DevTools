@@ -7,6 +7,9 @@
         "vimeo/psalm": "^6.12"
     },
     "config": {
+        "platform": {
+            "php": "8.2.27"
+        },
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true,
             "bamarni/composer-bin-plugin": true
