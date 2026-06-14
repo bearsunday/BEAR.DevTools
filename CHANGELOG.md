@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0.html),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-06-15
+
+### Added
+- `AbstractWorkflowTest::linkHref()` resolves a HAL/Resource link relation to a URI without issuing a request, for unsafe transitions (POST/PUT/DELETE) that must choose the HTTP method explicitly
+- `AbstractWorkflowTest::bodyString()` returns a body value asserted to be a string
+
+### Changed
+- Replaced the `WorkflowTestTrait` trait with the `AbstractWorkflowTest` base class. A concrete workflow test now extends `AbstractWorkflowTest` and writes the scenario once against `ResourceInterface`; an HTTP workflow test extends that concrete test and overrides only `newResource()`, proving the same rel-driven scenario across in-process and HTTP transports
+- Moved `phpunit/phpunit` from `require-dev` to `require`, since the package ships `AbstractWorkflowTest` as a public test base class
+
+### Fixed
+- `HrefExtractor` now `preg_quote()`s relation/attribute names before building patterns, corrects attribute and `Link` header value extraction, and relaxes the `preg_match_all` result check so multiple link elements are scanned
+
+### BC Break
+- `WorkflowTestTrait` (added in 1.3.0) has been removed. Replace `use BEAR\Dev\Http\WorkflowTestTrait;` with `extends BEAR\Dev\Http\AbstractWorkflowTest`. The helper method set is unchanged, plus the new `linkHref()` and `bodyString()`
+
 ## [1.3.0] - 2026-06-06
 
 ### Added
