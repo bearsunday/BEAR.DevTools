@@ -98,28 +98,55 @@ Content-Type: application/hal+json
 
 ### Workflow Testing
 
-`WorkflowTestTrait` helps drive hypermedia workflow tests. Implement `newResource()`, then navigate with `follow()` (a safe `GET` via a HAL `_links` relation) and `followLocation()` (a `GET` of the `Location` header returned by an unsafe transition). The same test body can run in-process or over HTTP by changing what `newResource()` returns.
+`AbstractWorkflowTest` is the base contract for rel-driven workflow tests. Write
+the workflow once against `ResourceInterface`, then run the same scenario over
+HTTP by extending the concrete workflow test and overriding only `newResource()`
+with `HttpResource`.
+
+```php
+use BEAR\Dev\Http\AbstractWorkflowTest;
+use BEAR\Resource\ResourceInterface;
+use BEAR\Resource\ResourceObject;
+use MyVendor\MyProject\Injector;
+
+use function assert;
+
+class WorkflowTest extends AbstractWorkflowTest
+{
+    protected function newResource(): ResourceInterface
+    {
+        $resource = Injector::getInstance('app')->getInstance(ResourceInterface::class);
+        assert($resource instanceof ResourceInterface);
+
+        return $resource;
+    }
+
+    public function testIndex(): ResourceObject
+    {
+        $index = $this->resource->get('/index');
+        $this->assertSame(200, $index->code);
+
+        return $index;
+    }
+
+    /** @depends testIndex */
+    public function testNext(ResourceObject $response): ResourceObject
+    {
+        return $this->follow($response, 'next');
+    }
+}
+```
 
 ```php
 use BEAR\Dev\Http\HttpResource;
-use BEAR\Dev\Http\WorkflowTestTrait;
 use BEAR\Resource\ResourceInterface;
-use PHPUnit\Framework\TestCase;
+use MyVendor\MyProject\Hypermedia\WorkflowTest as Workflow;
 
-final class WorkflowTest extends TestCase
+class WorkflowTest extends Workflow
 {
-    use WorkflowTestTrait;
-
     protected function newResource(): ResourceInterface
     {
-        return new HttpResource('127.0.0.1:8080', __DIR__ . '/public/index.php', __DIR__ . '/log');
-    }
-
-    public function testWorkflow(): void
-    {
-        $index = $this->resource->get('/');
-        $next = $this->follow($index, 'next');
-        $this->assertSame(200, $next->code);
+        return new HttpResource('127.0.0.1:8088', __DIR__ . '/index.php', __DIR__ . '/log');
     }
 }
 ```
@@ -141,4 +168,3 @@ This package includes comprehensive development tools:
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE) for more information.
-

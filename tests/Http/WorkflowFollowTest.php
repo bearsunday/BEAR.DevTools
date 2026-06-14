@@ -5,21 +5,20 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Resource\ResourceInterface;
-use PHPUnit\Framework\TestCase;
 
 use function assert;
 use function file_exists;
 
-class WorkflowFollowTest extends TestCase
+class WorkflowFollowTest extends AbstractWorkflowTest
 {
-    use WorkflowTestTrait;
+    private const HOST = '127.0.0.1:18082';
 
     protected function newResource(): ResourceInterface
     {
         $index = __DIR__ . '/index.php';
         assert(file_exists($index));
 
-        return new HttpResource('127.0.0.1:8081', $index, __DIR__ . '/log');
+        return new HttpResource(self::HOST, $index, __DIR__ . '/log');
     }
 
     public function testFollowUsesHalHrefGet(): void
@@ -28,5 +27,19 @@ class WorkflowFollowTest extends TestCase
         $next = $this->follow($ro, 'next');
         $this->assertSame(200, $next->code);
         $this->assertStringContainsString('"page": "linked"', $next->view);
+    }
+
+    public function testLinkHrefResolvesRelWithoutFollowing(): void
+    {
+        $ro = $this->resource->get('/');
+
+        $this->assertSame('page://self/linked', $this->linkHref($ro, 'next'));
+    }
+
+    public function testBodyStringReturnsTypedBodyValue(): void
+    {
+        $ro = $this->resource->get('/linked');
+
+        $this->assertSame('linked', $this->bodyString($ro, 'page'));
     }
 }

@@ -15,6 +15,8 @@ use function file_exists;
 
 class HttpResourceTest extends TestCase
 {
+    private const HAL_HOST = '127.0.0.1:18081';
+
     /** @var HttpResource $resource */
     private $resource;
 
@@ -93,6 +95,20 @@ class HttpResourceTest extends TestCase
         $this->assertSame('http://127.0.0.1:8080/', (string) $next->uri);
     }
 
+    public function testHrefFindsMatchingSemanticHtmlLinkAmongMultipleLinks(): void
+    {
+        $ro = new NullResourceObject();
+        $ro->body = [];
+        $ro->view = '<a href="/other" class="other">Other</a><a href="/" class="goHome">Home</a>';
+        $ro->headers = ['Link' => '</header>; rel="goHome"'];
+
+        $next = $this->resource->href('goHome', [], $ro);
+
+        $this->assertSame(200, $next->code);
+        $this->assertStringContainsString('"method": "onGet"', $next->view);
+        $this->assertSame('http://127.0.0.1:8080/', (string) $next->uri);
+    }
+
     public function testHrefFallsBackToLinkHeader(): void
     {
         $ro = new NullResourceObject();
@@ -120,7 +136,7 @@ class HttpResourceTest extends TestCase
     {
         $index = __DIR__ . '/index.php';
         assert(file_exists($index));
-        $resource = new HttpResource('127.0.0.1:8081', $index, __DIR__ . '/log');
+        $resource = new HttpResource(self::HAL_HOST, $index, __DIR__ . '/log');
 
         $ro = $resource->get('/');
         $this->assertSame(200, $ro->code);
@@ -136,7 +152,7 @@ class HttpResourceTest extends TestCase
     {
         $index = __DIR__ . '/index.php';
         assert(file_exists($index));
-        $resource = new HttpResource('127.0.0.1:8081', $index, __DIR__ . '/log');
+        $resource = new HttpResource(self::HAL_HOST, $index, __DIR__ . '/log');
         $ro = $resource->get('/');
 
         $this->expectException(HalLinkNotFoundException::class);

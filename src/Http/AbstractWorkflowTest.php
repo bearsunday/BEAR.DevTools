@@ -9,35 +9,33 @@ use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
 use PHPUnit\Framework\TestCase;
 
+use function sprintf;
 use function str_starts_with;
 use function strtolower;
 
 /**
- * Hypermedia workflow testing helpers.
+ * Base contract for transport-agnostic hypermedia workflow tests.
  *
- * Use this trait in a PHPUnit test that drives a BEAR.Sunday resource client,
- * implement {@see newResource()}, then navigate with {@see follow()} (safe HAL
- * link GET) and {@see followLocation()} (GET the `Location` after an unsafe
- * transition). The same test body can run against both an in-process resource
- * and {@see HttpResource} by overriding `newResource()`.
- *
- * @psalm-require-extends TestCase
+ * A concrete workflow test writes the scenario once against ResourceInterface.
+ * An HTTP workflow test can then extend that concrete test and override only
+ * newResource() with HttpResource, proving the same rel-driven scenario across
+ * in-process and HTTP transports.
  */
-trait WorkflowTestTrait
+abstract class AbstractWorkflowTest extends TestCase
 {
     /** @var array<class-string, ResourceInterface> */
-    private static array $workflowResources = [];
+    private static array $resources = [];
     protected ResourceInterface $resource;
 
     protected function setUp(): void
     {
         $class = static::class;
-        $this->resource = self::$workflowResources[$class] ??= $this->newResource();
+        $this->resource = self::$resources[$class] ??= $this->newResource();
     }
 
     public static function tearDownAfterClass(): void
     {
-        unset(self::$workflowResources[static::class]);
+        unset(self::$resources[static::class]);
     }
 
     abstract protected function newResource(): ResourceInterface;
@@ -56,6 +54,25 @@ trait WorkflowTestTrait
         $this->assertSame(Code::OK, $next->code);
 
         return $next;
+    }
+
+    /**
+     * Resolves a link relation without issuing a request.
+     *
+     * Use this for unsafe transitions (for example POST/PUT/DELETE) where the
+     * workflow needs the target URI but must choose the HTTP method explicitly.
+     */
+    protected function linkHref(ResourceObject $response, string $rel): string
+    {
+        if ($response->view === null) {
+            // Rendering materializes representation-driven headers such as Link.
+            (string) $response;
+        }
+
+        $href = (new HrefExtractor())->href($rel, $response);
+        $this->assertIsString($href, sprintf('Link rel `%s` should be present in the representation.', $rel));
+
+        return $this->resourceUriForLocation($href);
     }
 
     protected function followLocation(ResourceObject $response, string|null $expectedLocation = null): ResourceObject
@@ -79,6 +96,14 @@ trait WorkflowTestTrait
         $this->assertArrayHasKey($key, $body);
 
         return $body[$key];
+    }
+
+    protected function bodyString(ResourceObject $response, string $key): string
+    {
+        $value = $this->bodyValue($response, $key);
+        $this->assertIsString($value, sprintf('Expected body key `%s` to be a string.', $key));
+
+        return $value;
     }
 
     protected function header(ResourceObject $response, string $name): string|null
