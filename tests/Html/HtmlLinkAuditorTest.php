@@ -124,4 +124,45 @@ final class HtmlLinkAuditorTest extends TestCase
 
         $this->assertSame(['doDelete:method-mismatch'], $this->logger->warnings);
     }
+
+    public function testAnchorWithQueryStringMatchesLinkByPath(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('viewProduct', '/admin/product')],
+            '<a href="/admin/product?productCode=x" class="viewProduct">Product</a>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
+
+    public function testFormQueryStringMethodOverrideMatches(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('doBlock', '/admin/block/block', 'put')],
+            '<form action="/admin/block/block?blockId=42&amp;_method=put" method="post" class="doBlock"></form>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
+
+    public function testFormQueryStringMethodOverrideMismatch(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('doBlock', '/admin/block/block', 'delete')],
+            '<form action="/admin/block/block?blockId=42&amp;_method=put" method="post" class="doBlock"></form>',
+        );
+
+        $this->assertSame(['doBlock:method-mismatch'], $this->logger->warnings);
+    }
+
+    public function testHiddenInputOverrideTakesPrecedenceOverQueryStringOverride(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('doBlock', '/admin/block/block', 'put')],
+            '<form action="/admin/block/block?blockId=42&amp;_method=delete" method="post" class="doBlock">'
+                . '<input type="hidden" name="_method" value="put"></form>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
 }

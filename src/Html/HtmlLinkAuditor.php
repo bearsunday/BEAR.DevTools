@@ -6,12 +6,16 @@ namespace BEAR\Dev\Html;
 
 use function html_entity_decode;
 use function is_string;
+use function parse_str;
+use function parse_url;
 use function preg_match;
 use function preg_match_all;
 use function strtolower;
 
 use const ENT_HTML5;
 use const ENT_QUOTES;
+use const PHP_URL_PATH;
+use const PHP_URL_QUERY;
 use const PREG_SET_ORDER;
 
 final readonly class HtmlLinkAuditor
@@ -42,8 +46,9 @@ final readonly class HtmlLinkAuditor
     private function auditLink(LinkHeader $link, array $affordances): void
     {
         $targetMatches = [];
+        $targetPath = $this->path($link->href);
         foreach ($affordances as $affordance) {
-            if ($affordance->href !== $link->href) {
+            if ($this->path($affordance->href) !== $targetPath) {
                 continue;
             }
 
@@ -126,7 +131,9 @@ final readonly class HtmlLinkAuditor
             return null;
         }
 
-        $method = $this->methodOverride($body) ?? strtolower($this->attribute($attrs, 'method') ?? 'get');
+        $method = $this->methodOverride($body)
+            ?? $this->queryMethodOverride($href)
+            ?? strtolower($this->attribute($attrs, 'method') ?? 'get');
 
         return new HtmlAffordance(
             $href,
@@ -153,6 +160,26 @@ final readonly class HtmlLinkAuditor
         }
 
         return null;
+    }
+
+    private function queryMethodOverride(string $href): string|null
+    {
+        $query = parse_url($href, PHP_URL_QUERY);
+        if (! is_string($query) || $query === '') {
+            return null;
+        }
+
+        parse_str($query, $params);
+        $method = $params['_method'] ?? null;
+
+        return is_string($method) ? strtolower($method) : null;
+    }
+
+    private function path(string $href): string
+    {
+        $path = parse_url($href, PHP_URL_PATH);
+
+        return is_string($path) ? $path : $href;
     }
 
     private function attribute(string $attrs, string $name): string|null
