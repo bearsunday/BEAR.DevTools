@@ -64,4 +64,24 @@ final class HtmlLinkAuditorTest extends TestCase
 
         $this->assertSame(['doCheckout:method-mismatch'], $this->logger->warnings);
     }
+
+    public function testMultipleAffordances(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next')],
+            '<a href="/home">Home</a><a href="/next" class="goNext">Next</a><a href="/about">About</a>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
+
+    public function testSingleQuotedAndUnquotedAttributes(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next'), new LinkHeader('goPrev', '/prev')],
+            "<a href='/next' class='goNext'>Next</a><a href=/prev rel=goPrev>Prev</a>",
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
 }

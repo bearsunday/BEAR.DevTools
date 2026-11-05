@@ -8,6 +8,7 @@ use function html_entity_decode;
 use function is_string;
 use function preg_match;
 use function preg_match_all;
+use function preg_quote;
 use function strtolower;
 
 use const ENT_HTML5;
@@ -85,7 +86,7 @@ final readonly class HtmlLinkAuditor
     private function affordances(string $html): array
     {
         $affordances = [];
-        if (preg_match_all('/<(a|area|link|form)\b(?P<attrs>[^>]*)>/i', $html, $matches, PREG_SET_ORDER) !== 1) {
+        if (preg_match_all('/<(a|area|link|form)\b(?P<attrs>[^>]*)>/i', $html, $matches, PREG_SET_ORDER) === false) {
             return $affordances;
         }
 
@@ -112,11 +113,18 @@ final readonly class HtmlLinkAuditor
 
     private function attribute(string $attrs, string $name): string|null
     {
-        if (preg_match('/\b' . $name . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
+        if (preg_match('/\b' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
             return null;
         }
 
-        $value = $match[1] ?? $match[2] ?? $match[3] ?? '';
+        $value = $match[1];
+        if ($value === '' && isset($match[2])) {
+            $value = $match[2];
+        }
+
+        if ($value === '' && isset($match[3])) {
+            $value = $match[3];
+        }
 
         return html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
     }
