@@ -21,3 +21,4 @@ autoload.php
 /.phpcs.xml
 /.phpcs-cache
 /vendor-bin/tools/vendor/
+/var/build/
