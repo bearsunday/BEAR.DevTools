@@ -55,6 +55,25 @@ final class HrefExtractorTest extends TestCase
         $this->assertSame('/next', (new HrefExtractor())->href('goNext', $ro));
     }
 
+    public function testNameInsideAnotherAttributeValueIsIgnored(): void
+    {
+        $ro = $this->ro('<a title="href=/x" href="/next" class="goNext">Next</a>');
+
+        $this->assertSame('/next', (new HrefExtractor())->href('goNext', $ro));
+    }
+
+    public function testPrefixedHrefIsNotHref(): void
+    {
+        $ro = $this->ro('<a :href="url" xlink:href="/x" href="/next" class="goNext">Next</a>');
+
+        $this->assertSame('/next', (new HrefExtractor())->href('goNext', $ro));
+    }
+
+    public function testQuoteInsideUnquotedValue(): void
+    {
+        $this->assertSame('/next"x', (new HrefExtractor())->href('goNext', $this->ro('<a href=/next"x class=goNext>N</a>')));
+    }
+
     private function ro(string $view): NullResourceObject
     {
         $ro = new NullResourceObject();

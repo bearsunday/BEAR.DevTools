@@ -67,7 +67,7 @@ final class HrefExtractor
                 continue;
             }
 
-            $href = $this->attribute($attrs, 'href');
+            $href = $attrs['href'] ?? null;
             if ($href !== null && $href !== '') {
                 return $href;
             }
@@ -105,34 +105,11 @@ final class HrefExtractor
         return null;
     }
 
-    private function hasLinkToken(string $attrs, string $rel): bool
+    /** @param array<string, string> $attrs */
+    private function hasLinkToken(array $attrs, string $rel): bool
     {
-        $relAttr = $this->attribute($attrs, 'rel');
-        if ($relAttr !== null && $this->containsToken($relAttr, $rel)) {
-            return true;
-        }
-
-        $classAttr = $this->attribute($attrs, 'class');
-
-        return $classAttr !== null && $this->containsToken($classAttr, $rel);
-    }
-
-    private function attribute(string $attrs, string $name): string|null
-    {
-        if (preg_match('/(?<![\w-])' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
-            return null;
-        }
-
-        $value = $match[1];
-        if ($value === '' && isset($match[2])) {
-            $value = $match[2];
-        }
-
-        if ($value === '' && isset($match[3])) {
-            $value = $match[3];
-        }
-
-        return html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
+        return $this->containsToken($attrs['rel'] ?? '', $rel)
+            || $this->containsToken($attrs['class'] ?? '', $rel);
     }
 
     private function linkHeaderParam(string $attrs, string $name): string|null
