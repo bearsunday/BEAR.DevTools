@@ -84,7 +84,12 @@ final readonly class HtmlLinkAuditor
                 continue;
             }
 
-            $method = $tag === 'form' ? strtolower($attrs['method'] ?? 'get') : 'get';
+            // A form's missing or empty method attribute means GET.
+            $method = $tag === 'form' ? strtolower($attrs['method'] ?? '') : '';
+            if ($method === '') {
+                $method = 'get';
+            }
+
             $affordances[] = new HtmlAffordance(
                 $href,
                 $method,

@@ -182,4 +182,14 @@ final class HtmlLinkAuditorTest extends TestCase
 
         $this->assertSame([], $this->logger->warnings);
     }
+
+    public function testFormWithValuelessMethodIsGet(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next')],
+            '<form action="/next" method class="goNext"></form>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
 }

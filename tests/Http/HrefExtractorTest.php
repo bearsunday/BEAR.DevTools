@@ -69,6 +69,11 @@ final class HrefExtractorTest extends TestCase
         $this->assertSame('/next', (new HrefExtractor())->href('goNext', $ro));
     }
 
+    public function testPrefixedHrefAloneIsNotHref(): void
+    {
+        $this->assertNull((new HrefExtractor())->href('goNext', $this->ro('<a xlink:href="/wrong" class="goNext">Next</a>')));
+    }
+
     public function testQuoteInsideUnquotedValue(): void
     {
         $this->assertSame('/next"x', (new HrefExtractor())->href('goNext', $this->ro('<a href=/next"x class=goNext>N</a>')));
