@@ -84,4 +84,24 @@ final class HtmlLinkAuditorTest extends TestCase
 
         $this->assertSame([], $this->logger->warnings);
     }
+
+    public function testDataAttributeIsNotTarget(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next')],
+            '<a data-href="/next" href="/other" class="goNext">Next</a>',
+        );
+
+        $this->assertSame(['goNext:target-missing'], $this->logger->warnings);
+    }
+
+    public function testCommentedOutLinkIsNotTarget(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next')],
+            '<!-- <a href="/next" class="goNext">Next</a> --><a href="/other">Other</a>',
+        );
+
+        $this->assertSame(['goNext:target-missing'], $this->logger->warnings);
+    }
 }

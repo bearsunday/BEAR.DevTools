@@ -9,6 +9,7 @@ use function is_string;
 use function preg_match;
 use function preg_match_all;
 use function preg_quote;
+use function preg_replace;
 use function strtolower;
 
 use const ENT_HTML5;
@@ -86,7 +87,9 @@ final readonly class HtmlLinkAuditor
     private function affordances(string $html): array
     {
         $affordances = [];
-        if (preg_match_all('/<(a|area|link|form)\b(?P<attrs>[^>]*)>/i', $html, $matches, PREG_SET_ORDER) === false) {
+        // Tags inside HTML comments are not rendered, so they are not affordances.
+        $markup = preg_replace('/<!--.*?-->/s', '', $html) ?? $html;
+        if (preg_match_all('/<(a|area|link|form)\b(?P<attrs>[^>]*)>/i', $markup, $matches, PREG_SET_ORDER) === false) {
             return $affordances;
         }
 
@@ -113,7 +116,7 @@ final readonly class HtmlLinkAuditor
 
     private function attribute(string $attrs, string $name): string|null
     {
-        if (preg_match('/\b' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
+        if (preg_match('/(?<![\w-])' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
             return null;
         }
 

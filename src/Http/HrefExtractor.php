@@ -14,6 +14,7 @@ use function is_string;
 use function preg_match;
 use function preg_match_all;
 use function preg_quote;
+use function preg_replace;
 use function preg_split;
 use function strtolower;
 use function trim;
@@ -62,7 +63,9 @@ final class HrefExtractor
             return null;
         }
 
-        if (preg_match_all('/<(?:a|area|link)\b(?P<attrs>[^>]*)>/i', $view, $matches) === false) {
+        // Tags inside HTML comments are not rendered, so they are not affordances.
+        $markup = preg_replace('/<!--.*?-->/s', '', $view) ?? $view;
+        if (preg_match_all('/<(?:a|area|link)\b(?P<attrs>[^>]*)>/i', $markup, $matches) === false) {
             return null;
         }
 
@@ -123,7 +126,7 @@ final class HrefExtractor
 
     private function attribute(string $attrs, string $name): string|null
     {
-        if (preg_match('/\b' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
+        if (preg_match('/(?<![\w-])' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
             return null;
         }
 

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HtmlLinkAuditor` reported every link as `target-missing` when the HTML contained more than one `<a>`/`<area>`/`<link>`/`<form>` tag
 - `HtmlLinkAuditor` could not read single-quoted or unquoted attribute values (e.g. `class='goNext'`)
 - `CreateResponse` split header lines at the last `": "` instead of the first, corrupting values such as `Link: </next>; title="Step: 2"`
+- `HtmlLinkAuditor` and `HrefExtractor` read `data-href` (or any `*-href`/`*-class`/`*-rel`) as the real attribute, and treated links inside HTML comments as rendered affordances
 
 ## [1.4.0] - 2026-06-15
 
