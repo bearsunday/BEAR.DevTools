@@ -22,4 +22,18 @@ final class CreateResponseTest extends TestCase
         $this->assertSame('</next>; rel="goNext"; title="Step: 2"', $ro->headers['Link']);
         $this->assertSame('application/json', $ro->headers['Content-Type']);
     }
+
+    public function testHeaderWithoutSpaceAndEmptyHeader(): void
+    {
+        $ro = (new CreateResponse())(new Uri('http://127.0.0.1/'), [
+            'HTTP/1.1 200 OK',
+            'Link:</next>; rel="goNext"',
+            'X-Empty:',
+            '',
+            '{}',
+        ]);
+
+        $this->assertSame('</next>; rel="goNext"', $ro->headers['Link']);
+        $this->assertSame('', $ro->headers['X-Empty']);
+    }
 }

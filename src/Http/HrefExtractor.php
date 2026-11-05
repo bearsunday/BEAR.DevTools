@@ -64,7 +64,9 @@ final class HrefExtractor
         }
 
         // Tags inside HTML comments are not rendered, so they are not affordances.
-        $markup = preg_replace('/<!--.*?-->/s', '', $view) ?? $view;
+        // Like the HTML tokenizer, `<!-->`/`<!--->` close immediately, `--!>` also ends
+        // a comment, and an unclosed comment runs to the end of the document.
+        $markup = preg_replace('/<!---?>|<!--.*?(?:--!?>|\z)/s', '', $view) ?? $view;
         if (preg_match_all('/<(?:a|area|link)\b(?P<attrs>[^>]*)>/i', $markup, $matches) === false) {
             return null;
         }

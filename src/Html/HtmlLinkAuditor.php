@@ -88,7 +88,9 @@ final readonly class HtmlLinkAuditor
     {
         $affordances = [];
         // Tags inside HTML comments are not rendered, so they are not affordances.
-        $markup = preg_replace('/<!--.*?-->/s', '', $html) ?? $html;
+        // Like the HTML tokenizer, `<!-->`/`<!--->` close immediately, `--!>` also ends
+        // a comment, and an unclosed comment runs to the end of the document.
+        $markup = preg_replace('/<!---?>|<!--.*?(?:--!?>|\z)/s', '', $html) ?? $html;
         if (preg_match_all('/<(a|area|link|form)\b(?P<attrs>[^>]*)>/i', $markup, $matches, PREG_SET_ORDER) === false) {
             return $affordances;
         }

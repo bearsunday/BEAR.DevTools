@@ -95,11 +95,49 @@ final class HtmlLinkAuditorTest extends TestCase
         $this->assertSame(['goNext:target-missing'], $this->logger->warnings);
     }
 
+    public function testRealAttributeIsReadNextToDataAttribute(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/other')],
+            '<a data-href="/next" href="/other" class="goNext">Next</a>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
+
     public function testCommentedOutLinkIsNotTarget(): void
     {
         $this->auditor->audit(
             [new LinkHeader('goNext', '/next')],
             '<!-- <a href="/next" class="goNext">Next</a> --><a href="/other">Other</a>',
+        );
+
+        $this->assertSame(['goNext:target-missing'], $this->logger->warnings);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function commentEdgeCaseProvider(): array
+    {
+        return [
+            'abrupt empty comment' => ['<!--><a href="/next" class="goNext">Next</a><!-- c -->'],
+            'abrupt dash comment' => ['<!---><a href="/next" class="goNext">Next</a><!-- c -->'],
+            'bang-closed comment' => ['<!-- x --!><a href="/next" class="goNext">Next</a><!-- c -->'],
+        ];
+    }
+
+    /** @dataProvider commentEdgeCaseProvider */
+    public function testLinkAfterEarlyClosedCommentIsTarget(string $html): void
+    {
+        $this->auditor->audit([new LinkHeader('goNext', '/next')], $html);
+
+        $this->assertSame([], $this->logger->warnings);
+    }
+
+    public function testLinkInsideUnclosedCommentIsNotTarget(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next')],
+            '<p>x</p><!-- <a href="/next" class="goNext">Next</a>',
         );
 
         $this->assertSame(['goNext:target-missing'], $this->logger->warnings);

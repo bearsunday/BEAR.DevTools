@@ -28,6 +28,26 @@ final class HrefExtractorTest extends TestCase
         $this->assertSame('/next', (new HrefExtractor())->href('goNext', $ro));
     }
 
+    public function testLinkAfterEarlyClosedCommentIsFound(): void
+    {
+        $ro = $this->ro('<!--><a href="/next" class="goNext">N</a><!-- --><a href="/old" class="goNext">Old</a>');
+
+        $this->assertSame('/next', (new HrefExtractor())->href('goNext', $ro));
+    }
+
+    public function testLinkInsideUnclosedCommentIsIgnored(): void
+    {
+        $ro = $this->ro('<a href="/next" class="goNext">Next</a><!-- <a href="/old" class="goNext">Old</a>');
+        $this->assertSame('/next', (new HrefExtractor())->href('goNext', $ro));
+
+        $this->assertNull((new HrefExtractor())->href('goNext', $this->ro('<!-- <a href="/old" class="goNext">Old</a>')));
+    }
+
+    public function testSingleQuotedRelAttribute(): void
+    {
+        $this->assertSame('/next', (new HrefExtractor())->href('goNext', $this->ro("<link rel='goNext' href='/next'>")));
+    }
+
     private function ro(string $view): NullResourceObject
     {
         $ro = new NullResourceObject();
