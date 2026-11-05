@@ -35,7 +35,6 @@ final class CreateResponse
                 break;
             }
 
-            $line = $line;
             $headers[] = $line;
         } while ($line !== '');
 
@@ -80,7 +79,7 @@ final class CreateResponse
         $keyedHeader = [];
         array_pop($headers);
         foreach ($headers as $header) {
-            if (preg_match('/(.+):\s(.+)/', $header, $matched) !== 1) {
+            if (preg_match('/^([^:]+):\s*(.*)$/', $header, $matched) !== 1) {
                 // Skip malformed headers
                 continue;
             }

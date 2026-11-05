@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Http;
 
+use BEAR\Dev\Html\HtmlTagScanner;
 use BEAR\Resource\ResourceObject;
 use stdClass;
 
@@ -12,7 +13,6 @@ use function in_array;
 use function is_array;
 use function is_string;
 use function preg_match;
-use function preg_match_all;
 use function preg_quote;
 use function preg_split;
 use function strtolower;
@@ -62,11 +62,7 @@ final class HrefExtractor
             return null;
         }
 
-        if (preg_match_all('/<(?:a|area|link)\b(?P<attrs>[^>]*)>/i', $view, $matches) === false) {
-            return null;
-        }
-
-        foreach ($matches['attrs'] as $attrs) {
+        foreach (HtmlTagScanner::scan($view, ['a', 'area', 'link']) as ['attrs' => $attrs]) {
             if (! $this->hasLinkToken($attrs, $rel)) {
                 continue;
             }
@@ -123,7 +119,7 @@ final class HrefExtractor
 
     private function attribute(string $attrs, string $name): string|null
     {
-        if (preg_match('/\b' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
+        if (preg_match('/(?<![\w-])' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
             return null;
         }
 
