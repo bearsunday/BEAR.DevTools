@@ -142,4 +142,24 @@ final class HtmlLinkAuditorTest extends TestCase
 
         $this->assertSame(['goNext:target-missing'], $this->logger->warnings);
     }
+
+    public function testCommentOpenerInsideAttributeValueIsNotComment(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next')],
+            '<div title="<!--"><a href="/next" class="goNext">Next</a></div>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
+
+    public function testGreaterThanInsideAttributeValue(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next')],
+            '<a class="goNext" title="a>b" href="/next">Next</a>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
 }

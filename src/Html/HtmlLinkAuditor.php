@@ -7,14 +7,11 @@ namespace BEAR\Dev\Html;
 use function html_entity_decode;
 use function is_string;
 use function preg_match;
-use function preg_match_all;
 use function preg_quote;
-use function preg_replace;
 use function strtolower;
 
 use const ENT_HTML5;
 use const ENT_QUOTES;
-use const PREG_SET_ORDER;
 
 final readonly class HtmlLinkAuditor
 {
@@ -87,18 +84,7 @@ final readonly class HtmlLinkAuditor
     private function affordances(string $html): array
     {
         $affordances = [];
-        // Tags inside HTML comments are not rendered, so they are not affordances.
-        // Like the HTML tokenizer, `<!-->`/`<!--->` close immediately, `--!>` also ends
-        // a comment, and an unclosed comment runs to the end of the document.
-        $markup = preg_replace('/<!---?>|<!--.*?(?:--!?>|\z)/s', '', $html) ?? $html;
-        if (preg_match_all('/<(a|area|link|form)\b(?P<attrs>[^>]*)>/i', $markup, $matches, PREG_SET_ORDER) === false) {
-            return $affordances;
-        }
-
-        foreach ($matches as $match) {
-            $tag = strtolower($match[1]);
-            $attrs = $match['attrs'];
-
+        foreach (HtmlTagScanner::scan($html, ['a', 'area', 'link', 'form']) as ['tag' => $tag, 'attrs' => $attrs]) {
             $href = $tag === 'form' ? $this->attribute($attrs, 'action') : $this->attribute($attrs, 'href');
             if ($href === null || $href === '') {
                 continue;

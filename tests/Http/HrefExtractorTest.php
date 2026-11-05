@@ -48,6 +48,13 @@ final class HrefExtractorTest extends TestCase
         $this->assertSame('/next', (new HrefExtractor())->href('goNext', $this->ro("<link rel='goNext' href='/next'>")));
     }
 
+    public function testCommentOpenerInsideAttributeValueIsNotComment(): void
+    {
+        $ro = $this->ro('<div title="<!--"><a href="/next" class="goNext">Next</a></div>');
+
+        $this->assertSame('/next', (new HrefExtractor())->href('goNext', $ro));
+    }
+
     private function ro(string $view): NullResourceObject
     {
         $ro = new NullResourceObject();

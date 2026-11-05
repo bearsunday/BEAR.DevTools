@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Http;
 
+use BEAR\Dev\Html\HtmlTagScanner;
 use BEAR\Resource\ResourceObject;
 use stdClass;
 
@@ -12,9 +13,7 @@ use function in_array;
 use function is_array;
 use function is_string;
 use function preg_match;
-use function preg_match_all;
 use function preg_quote;
-use function preg_replace;
 use function preg_split;
 use function strtolower;
 use function trim;
@@ -63,15 +62,7 @@ final class HrefExtractor
             return null;
         }
 
-        // Tags inside HTML comments are not rendered, so they are not affordances.
-        // Like the HTML tokenizer, `<!-->`/`<!--->` close immediately, `--!>` also ends
-        // a comment, and an unclosed comment runs to the end of the document.
-        $markup = preg_replace('/<!---?>|<!--.*?(?:--!?>|\z)/s', '', $view) ?? $view;
-        if (preg_match_all('/<(?:a|area|link)\b(?P<attrs>[^>]*)>/i', $markup, $matches) === false) {
-            return null;
-        }
-
-        foreach ($matches['attrs'] as $attrs) {
+        foreach (HtmlTagScanner::scan($view, ['a', 'area', 'link']) as ['attrs' => $attrs]) {
             if (! $this->hasLinkToken($attrs, $rel)) {
                 continue;
             }
