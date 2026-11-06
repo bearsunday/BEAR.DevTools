@@ -316,10 +316,11 @@ final class HttpResource implements ResourceInterface
             throw $e;
         }
 
+        // Log the raw output first so it is kept even if it cannot be turned into a response.
+        $this->log($output, $curlCommand);
         $uri = new ResourceUri($url);
         $uri->method = $method;
         $ro = ($this->createResponse)($uri, $output);
-        $this->log($output, $curlCommand);
 
         return $ro;
     }
