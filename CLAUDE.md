@@ -42,6 +42,7 @@ HttpResource provides an HTTP client that automatically starts a built-in PHP se
 - Full HTTP method support (GET, POST, PUT, DELETE, PATCH)
 - Comprehensive request/response logging
 - Curl command logging for reproducible tests
+- Throws `HttpRequestException` when no HTTP response arrives (connection refused, timeout) instead of returning a fake 200
 - Integration with BEAR.Sunday resource objects
 
 **Usage:**
@@ -56,9 +57,9 @@ $ro = $resource->post('/users', ['name' => 'John', 'email' => 'john@example.com'
 ## Architecture
 
 ### Dependencies
-- **Core**: PHP 8.0+, BEAR.Sunday framework components
+- **Core**: PHP 8.2+, BEAR.Sunday framework components (bear/resource, ray/di, ray/aop)
 - **HTTP Server**: koriym/php-server for built-in server functionality
-- **Database**: aura/sql v3-v6 for database connectivity (including PHP 8.4 support)
+- **Testing**: phpunit/phpunit (a runtime dependency, because `AbstractWorkflowTest` is a public test base class)
 - **Profiling**: XHProf integration (optional, via require-dev)
 
 ### File Structure
@@ -68,9 +69,17 @@ src/
 │   ├── HaloModule.php
 │   ├── HaloRenderer.php
 │   └── TemplateLocator.php
+├── Html/           # Link header rendering and HTML link auditing
+│   ├── LinkHeaderModule.php
+│   ├── LinkHeaderRenderer.php
+│   ├── HtmlLinkAuditor.php
+│   └── HtmlTagScanner.php   # Comment-aware tag scanner and attribute tokenizer (internal)
 ├── Http/           # HTTP testing utilities
 │   ├── HttpResource.php
-│   └── CreateResponse.php
+│   ├── CreateResponse.php
+│   ├── HrefExtractor.php    # Resolves a link rel from HAL, semantic HTML or a Link header
+│   ├── AbstractWorkflowTest.php
+│   └── Exception/           # HalLinkNotFoundException, HttpRequestException
 ├── DevInvoker.php  # Development-specific resource invoker
 ├── QueryMerger.php # Query parameter handling
 └── Uri.php         # URI utilities
@@ -121,7 +130,7 @@ When working on this package:
 
 1. **Testing HTTP Features**: Use the HttpResource class to test server startup and HTTP client functionality
 2. **Halo Development**: Test visual debugging features in a BEAR.Sunday application context
-3. **Dependency Updates**: Ensure compatibility with all supported aura/sql versions (v3-v6)
+3. **Dependency Updates**: Ensure compatibility with all supported BEAR.Sunday and PHPUnit versions
 4. **XHProf Integration**: Test profiling features when XHProf extension is available
 
 ### Common Issues and Solutions
@@ -162,7 +171,7 @@ class WorkflowTest extends TestCase
 1. **Development Only**: This package should only be used in development/testing contexts
 2. **Server Management**: HttpResource handles server lifecycle - don't manually manage PHP servers
 3. **Log Files**: Configure appropriate locations for HTTP access logs
-4. **Compatibility**: Maintain support for PHP 8.0+ and all current BEAR.Sunday versions
+4. **Compatibility**: Maintain support for PHP 8.2+ and all current BEAR.Sunday versions
 5. **XHProf Optional**: All profiling features should work without XHProf extension
 
 ## Release Process
@@ -171,6 +180,6 @@ When preparing releases:
 
 1. Update CHANGELOG.md with version-specific changes
 2. Ensure all tests pass with latest dependencies
-3. Verify PHP 8.4 compatibility (especially aura/sql v6)
+3. Verify the CI matrix (PHP 8.2–8.5 and Windows) passes
 4. Update documentation examples if API changes
 5. Test XHProf integration when available
