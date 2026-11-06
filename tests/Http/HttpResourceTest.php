@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
+use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Resource\NullResourceObject;
 use BEAR\Resource\Uri;
 use PHPUnit\Framework\TestCase;
@@ -12,6 +13,7 @@ use PHPUnit\Framework\TestCase;
 use function assert;
 use function dirname;
 use function file_exists;
+use function str_repeat;
 
 class HttpResourceTest extends TestCase
 {
@@ -208,5 +210,20 @@ class HttpResourceTest extends TestCase
         ]);
         $this->assertSame(200, $ro->code);
         $this->assertStringContainsString('"method": "onPost"', $ro->view);
+    }
+
+    public function testLargePostBodyIsNotAnsweredWithContinue(): void
+    {
+        $ro = $this->resource->post('/', ['payload' => str_repeat('x', 4096)]);
+
+        $this->assertSame(200, $ro->code);
+        $this->assertStringContainsString('"method": "onPost"', $ro->view);
+    }
+
+    public function testConnectionFailureThrows(): void
+    {
+        $this->expectException(HttpRequestException::class);
+
+        $this->resource->request('http://127.0.0.1:1/', 'get', 'curl -s -i http://127.0.0.1:1/');
     }
 }

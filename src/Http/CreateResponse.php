@@ -29,6 +29,15 @@ final class CreateResponse
     {
         $headers = $body = [];
         $status = (string) array_shift($output);
+        // Skip interim 1xx responses (e.g. "100 Continue"); the final status line follows their blank line.
+        while (preg_match('#^HTTP/\S+\s+1\d\d\b#', $status) === 1) {
+            do {
+                $line = array_shift($output);
+            } while ($line !== null && $line !== '');
+
+            $status = (string) array_shift($output);
+        }
+
         do {
             $line = array_shift($output);
             if ($line === null) {

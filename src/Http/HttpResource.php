@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
+use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Dev\QueryMerger;
 use BEAR\Resource\RequestInterface;
 use BEAR\Resource\ResourceInterface;
@@ -14,6 +15,7 @@ use Koriym\PhpServer\PhpServer;
 use LogicException;
 use Override;
 
+use function curl_error;
 use function curl_exec;
 use function curl_init;
 use function curl_setopt;
@@ -35,11 +37,13 @@ use function strtolower;
 use function strtoupper;
 use function trim;
 
+use const CURLOPT_CONNECTTIMEOUT;
 use const CURLOPT_CUSTOMREQUEST;
 use const CURLOPT_HEADER;
 use const CURLOPT_HTTPHEADER;
 use const CURLOPT_POSTFIELDS;
 use const CURLOPT_RETURNTRANSFER;
+use const CURLOPT_TIMEOUT;
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const DIRECTORY_SEPARATOR;
 use const FILE_APPEND;
@@ -48,9 +52,13 @@ use const PHP_EOL;
 
 final class HttpResource implements ResourceInterface
 {
+    private const CONNECT_TIMEOUT = 10;
+    private const TIMEOUT = 30;
+
     private string $logPath;
     private string $baseUri;
-    private static PhpServer $server;
+    /** @var array<string, PhpServer> Servers started per host and index, kept alive for the whole process */
+    private static array $servers = [];
     private readonly QueryMerger $queryMerger;
     private readonly CreateResponse $createResponse;
     private readonly HrefExtractor $hrefExtractor;
@@ -68,17 +76,14 @@ final class HttpResource implements ResourceInterface
 
     private function startServer(string $host, string $index): void
     {
-        /** @var array<string> $started */
-        static $started = [];
-
         $id = $host . $index;
-        if (in_array($id, $started, true)) {
+        if (isset(self::$servers[$id])) {
             return;
         }
 
-        self::$server = new PhpServer($host, $index);
-        self::$server->start();
-        $started[] = $id;
+        $server = new PhpServer($host, $index);
+        $server->start();
+        self::$servers[$id] = $server;
     }
 
     /**
@@ -322,26 +327,31 @@ final class HttpResource implements ResourceInterface
     {
         $ch = curl_init($url);
         if ($ch === false) {
-            return []; // @codeCoverageIgnore
+            throw new HttpRequestException(sprintf('Could not initialize cURL for %s', $url)); // @codeCoverageIgnore
         }
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::CONNECT_TIMEOUT);
+        curl_setopt($ch, CURLOPT_TIMEOUT, self::TIMEOUT);
 
         $upperMethod = strtoupper($method);
         if ($upperMethod !== 'GET' && $upperMethod !== '') {
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $upperMethod);
         }
 
+        // An empty "Expect:" stops cURL from waiting for "100 Continue" on large bodies.
+        $headers = ['Expect:'];
         if ($body !== null) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
+            $headers[] = 'Content-Type:application/json';
         }
 
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         $response = curl_exec($ch);
 
         if (! is_string($response)) {
-            return [];
+            throw new HttpRequestException(sprintf('%s %s failed: %s', $upperMethod, $url, curl_error($ch)));
         }
 
         return $this->parseResponse($response);
