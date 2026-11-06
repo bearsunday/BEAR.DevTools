@@ -105,12 +105,12 @@ final class DevInvoker implements InvokerInterface
         try {
             $result = $this->invoker->invoke($request);
         } catch (Throwable $e) {
-            $this->finish($resource, $time, $memory, $profiling, $e);
+            $this->finish($resource, $time, $memory, $profiling);
 
             throw $e;
         }
 
-        $this->finish($resource, $time, $memory, $profiling, null);
+        $this->finish($resource, $time, $memory, $profiling);
 
         return $result;
     }
@@ -120,7 +120,6 @@ final class DevInvoker implements InvokerInterface
         float $time,
         int $memory,
         bool $profiling,
-        Throwable|null $pending,
     ): void {
         self::$depth--;
         $resource->headers[self::HEADER_EXECUTION_TIME] = (string) (microtime(true) - $time);
@@ -129,13 +128,8 @@ final class DevInvoker implements InvokerInterface
             return;
         }
 
-        if ($pending === null) {
-            $this->saveProfile($resource);
-
-            return;
-        }
-
-        // The resource already failed: never let a profile-save error replace its exception.
+        // Profiling is a diagnostic side effect: a failure to save it never replaces the request's result or
+        // exception.
         try {
             $this->saveProfile($resource);
         } catch (Throwable $e) {
