@@ -88,6 +88,9 @@ final class DevInvoker implements InvokerInterface
 
     private function devInvoke(ResourceObject $resource, AbstractRequest $request): ResourceObject
     {
+        // Anything that can throw (e.g. a JsonSerializable query value) runs before profiling starts.
+        $resource->headers[self::HEADER_QUERY] = (string) json_encode($request->query);
+
         // xhprof keeps one profile per process, so only the outermost (non-embedded) request profiles.
         $profiling = self::$depth === 0 && extension_loaded('xhprof');
         if ($profiling) {
@@ -95,7 +98,6 @@ final class DevInvoker implements InvokerInterface
             xhprof_enable(XHPROF_FLAGS_NO_BUILTINS | XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY);
         }
 
-        $resource->headers[self::HEADER_QUERY] = (string) json_encode($request->query);
         $time = microtime(true);
         $memory = memory_get_usage();
         self::$depth++;

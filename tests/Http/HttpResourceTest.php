@@ -234,6 +234,8 @@ class HttpResourceTest extends TestCase
             $this->fail('HttpRequestException should be thrown.');
         } catch (HttpRequestException $e) {
             $this->assertStringContainsString('http://127.0.0.1:1/', $e->getMessage());
+            // The cURL error (e.g. "Failed to connect ...") follows the URL.
+            $this->assertMatchesRegularExpression('#http://127\.0\.0\.1:1/ failed: \S#', $e->getMessage());
         }
 
         $this->assertFileExists($log);
