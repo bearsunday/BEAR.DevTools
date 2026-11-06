@@ -11,10 +11,12 @@ use BEAR\Resource\ResourceObject;
 use Override;
 use Ray\Aop\WeavedInterface;
 use Ray\Di\Di\Named;
+use Throwable;
 use XHProfRuns_Default;
 
 use function assert;
 use function class_exists;
+use function error_log;
 use function extension_loaded;
 use function is_array;
 use function is_int;
@@ -25,6 +27,7 @@ use function json_encode;
 use function memory_get_usage;
 use function microtime;
 use function property_exists;
+use function sprintf;
 use function sys_get_temp_dir;
 use function xhprof_disable;
 use function xhprof_enable;
@@ -46,6 +49,9 @@ final class DevInvoker implements InvokerInterface
     public const HEADER_PARAMS = 'x-params';
 
     public const HEADER_QUERY = 'x-query';
+
+    /** Nesting level of requests being invoked, shared because xhprof profiles the whole process */
+    private static int $depth = 0;
 
     public function __construct(
         #[Named('original')]
@@ -82,30 +88,69 @@ final class DevInvoker implements InvokerInterface
 
     private function devInvoke(ResourceObject $resource, AbstractRequest $request): ResourceObject
     {
-        if (extension_loaded('xhprof')) {
+        // Anything that can throw (e.g. a JsonSerializable query value) runs before profiling starts.
+        $resource->headers[self::HEADER_QUERY] = (string) json_encode($request->query);
+
+        // xhprof keeps one profile per process, so only the outermost (non-embedded) request profiles.
+        $profiling = self::$depth === 0 && extension_loaded('xhprof');
+        if ($profiling) {
             /** @psalm-suppress UndefinedConstant */
             xhprof_enable(XHPROF_FLAGS_NO_BUILTINS | XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY);
         }
 
-        $resource->headers[self::HEADER_QUERY] = (string) json_encode($request->query);
         $time = microtime(true);
         $memory = memory_get_usage();
+        self::$depth++;
 
-        $result = $this->invoker->invoke($request);
+        try {
+            $result = $this->invoker->invoke($request);
+        } catch (Throwable $e) {
+            $this->finish($resource, $time, $memory, $profiling);
 
-        // post process for log
-        $resource->headers[self::HEADER_EXECUTION_TIME] = (string) (microtime(true) - $time);
-        $resource->headers[self::HEADER_MEMORY_USAGE] = (string) (memory_get_usage() - $memory);
-        if (extension_loaded('xhprof') && class_exists('XHProfRuns_Default')) {
-            $xhprof = xhprof_disable();
-            $profileId = (new XHProfRuns_Default(sys_get_temp_dir()))->save_run($xhprof, 'resource');
-            assert(is_string($profileId) || is_int($profileId) || $profileId === null);
-            if ($profileId !== null) {
-                $resource->headers[self::HEADER_PROFILE_ID] = (string) $profileId;
-            }
+            throw $e;
         }
 
+        $this->finish($resource, $time, $memory, $profiling);
+
         return $result;
+    }
+
+    private function finish(
+        ResourceObject $resource,
+        float $time,
+        int $memory,
+        bool $profiling,
+    ): void {
+        self::$depth--;
+        $resource->headers[self::HEADER_EXECUTION_TIME] = (string) (microtime(true) - $time);
+        $resource->headers[self::HEADER_MEMORY_USAGE] = (string) (memory_get_usage() - $memory);
+        if (! $profiling) {
+            return;
+        }
+
+        // Profiling is a diagnostic side effect: a failure to save it never replaces the request's result or
+        // exception.
+        try {
+            $this->saveProfile($resource);
+        } catch (Throwable $e) {
+            error_log(sprintf('[BEAR.DevTools] XHProf profile was not saved: %s', $e->getMessage()));
+        }
+    }
+
+    private function saveProfile(ResourceObject $resource): void
+    {
+        $xhprof = xhprof_disable();
+        if (! class_exists('XHProfRuns_Default')) {
+            return; // @codeCoverageIgnore
+        }
+
+        $profileId = (new XHProfRuns_Default(sys_get_temp_dir()))->save_run($xhprof, 'resource');
+        assert(is_string($profileId) || is_int($profileId) || $profileId === null);
+        if ($profileId === null) {
+            return; // @codeCoverageIgnore
+        }
+
+        $resource->headers[self::HEADER_PROFILE_ID] = (string) $profileId;
     }
 
     private function getRo(AbstractRequest $request): ResourceObject

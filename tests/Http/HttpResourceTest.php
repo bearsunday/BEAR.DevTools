@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
+use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Resource\NullResourceObject;
 use BEAR\Resource\Uri;
 use PHPUnit\Framework\TestCase;
@@ -12,6 +13,9 @@ use PHPUnit\Framework\TestCase;
 use function assert;
 use function dirname;
 use function file_exists;
+use function file_get_contents;
+use function str_repeat;
+use function unlink;
 
 class HttpResourceTest extends TestCase
 {
@@ -208,5 +212,39 @@ class HttpResourceTest extends TestCase
         ]);
         $this->assertSame(200, $ro->code);
         $this->assertStringContainsString('"method": "onPost"', $ro->view);
+    }
+
+    public function testLargePostBodyDoesNotSendExpectContinue(): void
+    {
+        // cURL adds "Expect: 100-continue" for bodies over 1 MiB and then waits for a 100 response.
+        $resource = new HttpResource('127.0.0.1:18083', dirname(__DIR__) . '/Fake/expect-echo.php', __DIR__ . '/log');
+        $ro = $resource->post('/', ['payload' => str_repeat('x', 1_100_000)]);
+
+        $this->assertSame(200, $ro->code);
+        $this->assertNull($ro->body['expect']);
+        $this->assertGreaterThan(1_100_000, $ro->body['length']);
+        // The logged curl command shows the size instead of a body too long for a command line.
+        $log = (string) file_get_contents(__DIR__ . '/log/test-large-post-body-does-not-send-expect-continue.log');
+        $this->assertMatchesRegularExpression('/<\d+ bytes omitted>/', $log);
+    }
+
+    public function testConnectionFailureThrows(): void
+    {
+        $log = __DIR__ . '/log/test-connection-failure-throws.log';
+        if (file_exists($log)) {
+            unlink($log);
+        }
+
+        try {
+            $this->resource->request('http://127.0.0.1:1/', 'get', 'curl -s -i http://127.0.0.1:1/');
+            $this->fail('HttpRequestException should be thrown.');
+        } catch (HttpRequestException $e) {
+            $this->assertStringContainsString('http://127.0.0.1:1/', $e->getMessage());
+            // The cURL error (e.g. "Failed to connect ...") follows the URL.
+            $this->assertMatchesRegularExpression('#http://127\.0\.0\.1:1/ failed: \S#', $e->getMessage());
+        }
+
+        $this->assertFileExists($log);
+        $this->assertStringContainsString('curl -s -i http://127.0.0.1:1/', (string) file_get_contents($log));
     }
 }

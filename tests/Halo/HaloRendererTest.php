@@ -9,6 +9,7 @@ use BEAR\Dev\FakeHalo;
 use BEAR\Resource\NullRenderer;
 use BEAR\Resource\RenderInterface;
 use BEAR\Resource\ResourceObject;
+use BEAR\Resource\Uri;
 use PHPUnit\Framework\TestCase;
 use Ray\Aop\NullInterceptor;
 use Ray\Di\AbstractModule;
@@ -59,7 +60,7 @@ class HaloRendererTest extends TestCase
                 $this->bind(RenderInterface::class)->to(NullRenderer::class);
             }
         }))->getInstance(FakeHalo::class);
-        $ro->uri = 'page://self/dummy';
+        $ro->uri = new Uri('page://self/dummy');
         $view = $renderer->render($ro);
         $this->assertStringStartsWith('<html>', $view);
         $this->assertStringContainsString('<body><!-- resource:', $view);
@@ -78,5 +79,52 @@ class HaloRendererTest extends TestCase
         $ro->body = 'Hello World!';
         $view = $renderer->render($ro);
         $this->assertStringContainsString('<p>Hello World!</p>', $view);
+    }
+
+    /**
+     * @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer
+     *
+     * @depends testRender
+     */
+    public function testRenderReturnsViewWithDevTools(array $roRenderer): void
+    {
+        [$ro, $renderer] = $roRenderer;
+        $_GET['halo'] = '1';
+        $view = $renderer->render($ro);
+
+        $this->assertStringContainsString('<!-- BEAR.Sunday dev tools -->', $view);
+        $this->assertSame($ro->view, $view);
+    }
+
+    /**
+     * @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer
+     *
+     * @depends testRender
+     */
+    public function testStateIsEscaped(array $roRenderer): void
+    {
+        [$ro, $renderer] = $roRenderer;
+        $_GET['halo'] = '1';
+        $ro->body = ['name' => '<script>alert(1)</script>'];
+        $view = $renderer->render($ro);
+
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $view);
+        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $view);
+    }
+
+    /**
+     * @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer
+     *
+     * @depends testRender
+     */
+    public function testResourceUriIsEscaped(array $roRenderer): void
+    {
+        [$ro, $renderer] = $roRenderer;
+        $_GET['halo'] = '1';
+        $ro->uri = new Uri('page://self/dummy?q=1&x=2');
+        $view = $renderer->render($ro);
+
+        $this->assertStringNotContainsString('?q=1&x=2', $view);
+        $this->assertStringContainsString('?q=1&amp;x=2', $view);
     }
 }

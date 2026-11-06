@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
+use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Dev\QueryMerger;
 use BEAR\Resource\RequestInterface;
 use BEAR\Resource\ResourceInterface;
@@ -14,6 +15,7 @@ use Koriym\PhpServer\PhpServer;
 use LogicException;
 use Override;
 
+use function curl_error;
 use function curl_exec;
 use function curl_init;
 use function curl_setopt;
@@ -31,10 +33,12 @@ use function preg_replace;
 use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
+use function strlen;
 use function strtolower;
 use function strtoupper;
 use function trim;
 
+use const CURLOPT_CONNECTTIMEOUT;
 use const CURLOPT_CUSTOMREQUEST;
 use const CURLOPT_HEADER;
 use const CURLOPT_HTTPHEADER;
@@ -48,9 +52,14 @@ use const PHP_EOL;
 
 final class HttpResource implements ResourceInterface
 {
+    private const CONNECT_TIMEOUT = 10;
+    private const LOGGED_ARG_MAX = 8000;
+
     private string $logPath;
     private string $baseUri;
-    private static PhpServer $server;
+
+    /** @var array<string, PhpServer> Servers started per host and index, kept alive for the whole process */
+    private static array $servers = [];
     private readonly QueryMerger $queryMerger;
     private readonly CreateResponse $createResponse;
     private readonly HrefExtractor $hrefExtractor;
@@ -68,17 +77,14 @@ final class HttpResource implements ResourceInterface
 
     private function startServer(string $host, string $index): void
     {
-        /** @var array<string> $started */
-        static $started = [];
-
         $id = $host . $index;
-        if (in_array($id, $started, true)) {
+        if (isset(self::$servers[$id])) {
             return;
         }
 
-        self::$server = new PhpServer($host, $index);
-        self::$server->start();
-        $started[] = $id;
+        $server = new PhpServer($host, $index);
+        $server->start();
+        self::$servers[$id] = $server;
     }
 
     /**
@@ -223,7 +229,7 @@ final class HttpResource implements ResourceInterface
         $uri = ($this->queryMerger)($path, $query);
         $queryParameter = $uri->query ? '?' . http_build_query($uri->query) : '';
         $url = sprintf('%s%s%s', $this->baseUri, $uri->path, $queryParameter);
-        $curlCommand = sprintf('curl -s -i %s', escapeshellarg($url));
+        $curlCommand = sprintf('curl -s -i %s', self::shellArg($url));
 
         return $this->request($url, 'get', $curlCommand);
     }
@@ -239,11 +245,27 @@ final class HttpResource implements ResourceInterface
             'curl -s -i -H %s -X %s -d %s %s',
             escapeshellarg('Content-Type:application/json'),
             escapeshellarg($method),
-            escapeshellarg($json),
-            escapeshellarg($url),
+            self::shellArg($json),
+            self::shellArg($url),
         );
 
         return $this->request($url, $method, $curlCommand, $json);
+    }
+
+    /**
+     * Quote an argument for the logged curl command.
+     *
+     * escapeshellarg() refuses arguments longer than the platform command line limit (about 8 KB on Windows,
+     * ARG_MAX elsewhere, e.g. 1 MiB on macOS): a fatal error, or a ValueError on PHP 8.4+. Such an argument
+     * cannot be pasted into a shell anyway, so the logged command shows its size instead.
+     */
+    private static function shellArg(string $arg): string
+    {
+        if (strlen($arg) > self::LOGGED_ARG_MAX) {
+            return escapeshellarg(sprintf('<%d bytes omitted>', strlen($arg)));
+        }
+
+        return escapeshellarg($arg);
     }
 
     /** @param array<string> $output */
@@ -304,13 +326,20 @@ final class HttpResource implements ResourceInterface
 
     public function request(string $url, string $method, string $curlCommand, string|null $body = null): ResourceObject
     {
-        $output = $this->executeCurl($url, $method, $body);
+        try {
+            $output = $this->executeCurl($url, $method, $body);
+        } catch (HttpRequestException $e) {
+            $this->log([$e->getMessage()], $curlCommand);
+
+            throw $e;
+        }
+
+        // Log the raw output first so it is kept even if it cannot be turned into a response.
+        $this->log($output, $curlCommand);
         $uri = new ResourceUri($url);
         $uri->method = $method;
-        $ro = ($this->createResponse)($uri, $output);
-        $this->log($output, $curlCommand);
 
-        return $ro;
+        return ($this->createResponse)($uri, $output);
     }
 
     /**
@@ -322,26 +351,31 @@ final class HttpResource implements ResourceInterface
     {
         $ch = curl_init($url);
         if ($ch === false) {
-            return []; // @codeCoverageIgnore
+            throw new HttpRequestException(sprintf('Could not initialize cURL for %s', $url)); // @codeCoverageIgnore
         }
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, true);
+        // Only the connection is time-limited: a slow response (or a server paused in a debugger) is waited for.
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::CONNECT_TIMEOUT);
 
         $upperMethod = strtoupper($method);
         if ($upperMethod !== 'GET' && $upperMethod !== '') {
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $upperMethod);
         }
 
+        // An empty "Expect:" stops cURL from waiting for "100 Continue" on large bodies.
+        $headers = ['Expect:'];
         if ($body !== null) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
+            $headers[] = 'Content-Type:application/json';
         }
 
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         $response = curl_exec($ch);
 
         if (! is_string($response)) {
-            return [];
+            throw new HttpRequestException(sprintf('%s %s failed: %s', $upperMethod, $url, curl_error($ch)));
         }
 
         return $this->parseResponse($response);

@@ -1,6 +1,6 @@
 {
     "name": "bear/devtools",
-    "description": "",
+    "description": "Development tools for BEAR.Sunday: Halo resource inspector, HTTP resource client and hypermedia workflow testing",
     "license": "MIT",
     "authors": [
         {

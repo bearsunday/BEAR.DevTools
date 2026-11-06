@@ -19,6 +19,7 @@ use function array_walk_recursive;
 use function assert;
 use function class_exists;
 use function highlight_string;
+use function htmlspecialchars;
 use function is_array;
 use function is_object;
 use function is_scalar;
@@ -29,12 +30,16 @@ use function number_format;
 use function preg_match;
 use function preg_replace;
 use function preg_replace_callback;
+use function rawurlencode;
 use function setcookie;
 use function spl_object_hash;
 use function str_contains;
 use function str_replace;
 use function time;
 
+use const ENT_HTML5;
+use const ENT_QUOTES;
+use const ENT_SUBSTITUTE;
 use const JSON_PRETTY_PRINT;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
@@ -64,7 +69,7 @@ final class HaloRenderer implements RenderInterface
     #[Override]
     public function render(ResourceObject $ro)
     {
-        if (! $this->isEableHalo()) {
+        if (! $this->isHaloEnabled()) {
             // @codeCoverageIgnoreStart
             $ro->view = $this->renderer->render($ro);
 
@@ -78,10 +83,10 @@ final class HaloRenderer implements RenderInterface
         $toolView = $this->addJsDevTools($haloView);
         $ro->view = $toolView;
 
-        return $haloView;
+        return $toolView;
     }
 
-    private function isEableHalo(): bool
+    private function isHaloEnabled(): bool
     {
         if (! isset($_GET[self::HALO_KEY])) {
             return isset($_COOKIE[self::HALO_COOKIE_KEY]); // @codeCoverageIgnore
@@ -110,11 +115,11 @@ final class HaloRenderer implements RenderInterface
             '<link href="https://koriym.github.io/BEAR.Package/assets/css/bear.dev.css" rel="stylesheet">' . PHP_EOL;
         $bootstrapCss .= str_contains($body, 'glyphicons.css') ? '' : '<link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css" rel="stylesheet">' . PHP_EOL;
         $tabJs = str_contains($body, '/assets/js/bootstrap-tab.js') ? '' : '<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap-tab.js"></script>' . PHP_EOL;
-        $bootstrapJs = '<link href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/united/bootstrap.min.css" rel="stylesheet">';
+        $themeCss = '<link href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/united/bootstrap.min.css" rel="stylesheet">';
         $toolLoad = <<<EOT
 <!-- BEAR.Sunday dev tools -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-{$bootstrapCss}{$tabJs}{$bootstrapJs}
+{$bootstrapCss}{$tabJs}{$themeCss}
 <!-- /BEAR.Sunday dev tools -->
 EOT;
 
@@ -132,11 +137,15 @@ EOT;
         string $templateFile,
         string $body
     ): string {
-        $resourceName = $ro->uri;
+        $resourceName = self::escape((string) $ro->uri);
         // code editor
         $ref = new ReflectionObject($ro);
         $codeFile = $ro instanceof WeavedInterface && $ref->getParentClass() ? $ref->getParentClass()->getFileName() : $ref->getFileName();
 //        $codeFile = $this->makeRelativePath($codeFile);
+        $codeLink = self::editorUrl((string) $codeFile);
+        $codeTitle = self::escape((string) $codeFile);
+        $templateLink = self::editorUrl($templateFile);
+        $templateTitle = self::escape($templateFile);
         $var = $this->getStatus($ro->body);
         $resourceKey = spl_object_hash($ro);
         $escapedBody = (string) preg_replace('/<!-- BEAR\.Sunday dev tool load -->.*BEAR\.Sunday dev tool load -->/', '', $body);
@@ -160,8 +169,8 @@ EOT;
         $resourceBodyHtml = highlight_string($resourceBody, true);
         $info = $this->getResourceInfo($ro);
         $editTemplate = $templateFile ? <<<EOT
-<a href="phpstorm://open?file={$templateFile}"><span class="glyphicon glyphicon-file"
-        rel="tooltip" title="Edit {$templateFile}"></span></a>
+<a href="{$templateLink}"><span class="glyphicon glyphicon-file"
+        rel="tooltip" title="Edit {$templateTitle}"></span></a>
 EOT : '<span style="color: lightgray" class="glyphicon glyphicon-file"></span>';
         $result = <<<EOT
 <!-- resource:{$resourceName} -->
@@ -177,8 +186,8 @@ EOT : '<span style="color: lightgray" class="glyphicon glyphicon-file"></span>';
     <a data-toggle="tab" href="#{$resourceKey}_info"><span class="glyphicon glyphicon-info-sign" rel="tooltip"
     title="Info"></span></a>
     <span class="edit">
-        <a href="phpstorm://open?file={$codeFile}"><span class="glyphicon glyphicon-edit"
-        rel="tooltip" title="Edit {$codeFile}"></span></a>
+        <a href="{$codeLink}"><span class="glyphicon glyphicon-edit"
+        rel="tooltip" title="Edit {$codeTitle}"></span></a>
         {$editTemplate}
     </span>
 </div>
@@ -217,7 +226,7 @@ EOT;
     private function getStatus(mixed $body): string
     {
         if (is_scalar($body)) {
-            return (string) $body;
+            return self::escape((string) $body);
         }
 
         // @codeCoverageIgnoreStart
@@ -245,7 +254,7 @@ EOT;
         );
         // @codeCoverageIgnoreEnd
 
-        return '<pre>' . (string) json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . '</pre>';
+        return '<pre>' . self::escape((string) json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)) . '</pre>';
     }
 
     private function getResourceInfo(ResourceObject $ro): string
@@ -267,27 +276,33 @@ EOT;
         $interceptors = json_decode($ro->headers[DevInvoker::HEADER_INTERCEPTORS], true);
         assert(is_array($interceptors));
         unset($ro->headers[DevInvoker::HEADER_INTERCEPTORS]);
-        $onGetInterceptors = isset($interceptors['onGet']) && is_array($interceptors['onGet']) ? $interceptors['onGet'] : [];
-        foreach ($onGetInterceptors as $interceptor) {
-            if (! is_string($interceptor) || ! class_exists($interceptor)) {
+        $result .= '<ul>';
+        foreach ($interceptors as $method => $methodInterceptors) {
+            if (! is_array($methodInterceptors)) {
                 continue; // @codeCoverageIgnore
             }
 
-            $interceptorFile = (new ReflectionClass($interceptor))->getFileName();
-            $result .= <<<EOT
-<li><a href="phpstorm://open?file={$interceptorFile}">{$interceptor}</a>
+            foreach ($methodInterceptors as $interceptor) {
+                if (! is_string($interceptor) || ! class_exists($interceptor)) {
+                    continue; // @codeCoverageIgnore
+                }
+
+                $interceptorLink = self::editorUrl((string) (new ReflectionClass($interceptor))->getFileName());
+                $methodName = self::escape((string) $method);
+                $interceptorName = self::escape($interceptor);
+                $result .= <<<EOT
+<li>{$methodName}: <a href="{$interceptorLink}">{$interceptorName}</a></li>
 EOT;
+            }
         }
 
-        $result .= '</div>';
-
-        return $result;
+        return $result . '</ul></div>';
     }
 
     private function getProfileInfo(ResourceObject $ro): string
     {
         // memory, time
-        $html = self::BADGE_PROFILE . self::DIV_WELL;
+        $html = self::BADGE_PROFILE . self::DIV_WELL . '<ul>';
         $time = isset($ro->headers[DevInvoker::HEADER_EXECUTION_TIME]) ?
             number_format((float) $ro->headers[DevInvoker::HEADER_EXECUTION_TIME], 3) : 0;
 
@@ -295,20 +310,35 @@ EOT;
             number_format((float) $ro->headers[DevInvoker::HEADER_MEMORY_USAGE]) : 0;
 
         $html .= <<<EOT
-    <li><span class="glyphicon glyphicon-time"></span>  {$time} sec
-    <li><span class="glyphicon glyphicon-signal"></span> {$memory} bytes
+    <li><span class="glyphicon glyphicon-time"></span>  {$time} sec</li>
+    <li><span class="glyphicon glyphicon-signal"></span> {$memory} bytes</li>
 EOT;
         // profile id
         if (isset($ro->headers[DevInvoker::HEADER_PROFILE_ID])) {
             $profileId = $ro->headers[DevInvoker::HEADER_PROFILE_ID];
+            $profileLink = self::escape('/xhprof_html/index.php?run=' . rawurlencode($profileId) . '&source=resource');
+            $profileName = self::escape($profileId);
             $html .= <<<EOT
-    <li><span title="XHProf">XH</span> <a href="/xhprof_html/index.php?run={$profileId}&source=resource">{$profileId}</a>
+    <li><span title="XHProf">XH</span> <a href="{$profileLink}">{$profileName}</a></li>
 EOT;
         }
 
         $html .= '</ul>';
 
         return $html . '</div>';
+    }
+
+    private static function escape(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+    }
+
+    private static function editorUrl(string $file): string
+    {
+        // Keep path separators and drive letters readable (`/`, `\`, `C:`); encode the rest.
+        $path = str_replace(['%2F', '%5C', '%3A'], ['/', '\\', ':'], rawurlencode($file));
+
+        return self::escape('phpstorm://open?file=' . $path);
     }
 
     public function setHaloCookie(): void
