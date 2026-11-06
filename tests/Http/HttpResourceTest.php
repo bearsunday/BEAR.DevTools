@@ -223,6 +223,9 @@ class HttpResourceTest extends TestCase
         $this->assertSame(200, $ro->code);
         $this->assertNull($ro->body['expect']);
         $this->assertGreaterThan(1_100_000, $ro->body['length']);
+        // The logged curl command shows the size instead of a body too long for a command line.
+        $log = (string) file_get_contents(__DIR__ . '/log/test-large-post-body-does-not-send-expect-continue.log');
+        $this->assertMatchesRegularExpression('/<\d+ bytes omitted>/', $log);
     }
 
     public function testConnectionFailureThrows(): void

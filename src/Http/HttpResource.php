@@ -33,8 +33,8 @@ use function preg_replace;
 use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
-use function strtolower;
 use function strlen;
+use function strtolower;
 use function strtoupper;
 use function trim;
 
@@ -49,12 +49,11 @@ use const DIRECTORY_SEPARATOR;
 use const FILE_APPEND;
 use const JSON_THROW_ON_ERROR;
 use const PHP_EOL;
-use const PHP_OS_FAMILY;
 
 final class HttpResource implements ResourceInterface
 {
     private const CONNECT_TIMEOUT = 10;
-    private const WINDOWS_ARG_MAX = 8000;
+    private const LOGGED_ARG_MAX = 8000;
 
     private string $logPath;
     private string $baseUri;
@@ -230,7 +229,7 @@ final class HttpResource implements ResourceInterface
         $uri = ($this->queryMerger)($path, $query);
         $queryParameter = $uri->query ? '?' . http_build_query($uri->query) : '';
         $url = sprintf('%s%s%s', $this->baseUri, $uri->path, $queryParameter);
-        $curlCommand = sprintf('curl -s -i %s', escapeshellarg($url));
+        $curlCommand = sprintf('curl -s -i %s', self::shellArg($url));
 
         return $this->request($url, 'get', $curlCommand);
     }
@@ -247,7 +246,7 @@ final class HttpResource implements ResourceInterface
             escapeshellarg('Content-Type:application/json'),
             escapeshellarg($method),
             self::shellArg($json),
-            escapeshellarg($url),
+            self::shellArg($url),
         );
 
         return $this->request($url, $method, $curlCommand, $json);
@@ -256,12 +255,13 @@ final class HttpResource implements ResourceInterface
     /**
      * Quote an argument for the logged curl command.
      *
-     * escapeshellarg() rejects arguments of 8192 bytes or more on Windows (ValueError); such a body could not be
-     * passed on a Windows command line anyway, so the log shows its size instead of failing the request.
+     * escapeshellarg() refuses arguments longer than the platform command line limit (about 8 KB on Windows,
+     * ARG_MAX elsewhere, e.g. 1 MiB on macOS): a fatal error, or a ValueError on PHP 8.4+. Such an argument
+     * cannot be pasted into a shell anyway, so the logged command shows its size instead.
      */
     private static function shellArg(string $arg): string
     {
-        if (PHP_OS_FAMILY === 'Windows' && strlen($arg) > self::WINDOWS_ARG_MAX) {
+        if (strlen($arg) > self::LOGGED_ARG_MAX) {
             return escapeshellarg(sprintf('<%d bytes omitted>', strlen($arg)));
         }
 
@@ -338,6 +338,7 @@ final class HttpResource implements ResourceInterface
         $this->log($output, $curlCommand);
         $uri = new ResourceUri($url);
         $uri->method = $method;
+
         return ($this->createResponse)($uri, $output);
     }
 
