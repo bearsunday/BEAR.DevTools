@@ -29,20 +29,7 @@ final class CreateResponse
     public function __invoke(Uri $uri, array $output): ResourceObject
     {
         $headers = $body = [];
-        $status = (string) array_shift($output);
-        // Skip interim 1xx responses (e.g. "100 Continue"); the final status line follows their blank line.
-        // 101 Switching Protocols is final for this connection, so it is kept.
-        while (preg_match('#^HTTP/\S+\s+1(?!01\b)\d\d\b#', $status) === 1) {
-            do {
-                $line = array_shift($output);
-            } while ($line !== null && $line !== '');
-
-            $status = (string) array_shift($output);
-        }
-
-        if (preg_match('#^HTTP/\S+\s+\d{3}\b#', $status) !== 1) {
-            throw new HttpRequestException(sprintf('%s: no HTTP status line in the response', (string) $uri));
-        }
+        $status = $this->finalStatusLine($uri, $output);
 
         do {
             $line = array_shift($output);
@@ -71,6 +58,32 @@ final class CreateResponse
         $ro->view = $view;
 
         return $ro;
+    }
+
+    /**
+     * Shift the output up to the final status line and return it.
+     *
+     * Interim 1xx responses (e.g. "100 Continue") are skipped; their blank line precedes the final status line.
+     * 101 Switching Protocols is final for this connection, so it is kept.
+     *
+     * @param array<string> $output
+     */
+    private function finalStatusLine(Uri $uri, array &$output): string
+    {
+        $status = (string) array_shift($output);
+        while (preg_match('#^HTTP/\S+\s+1(?!01\b)\d\d\b#', $status) === 1) {
+            do {
+                $line = array_shift($output);
+            } while ($line !== null && $line !== '');
+
+            $status = (string) array_shift($output);
+        }
+
+        if (preg_match('#^HTTP/\S+\s+\d{3}\b#', $status) !== 1) {
+            throw new HttpRequestException(sprintf('%s: no HTTP status line in the response', (string) $uri));
+        }
+
+        return $status;
     }
 
     private function getCode(string $status): int
