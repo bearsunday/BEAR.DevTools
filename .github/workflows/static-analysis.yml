@@ -27,6 +27,7 @@ jobs:
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: dependencies-php-8.4-composer-${{ hashFiles('composer.json') }}
+          restore-keys: dependencies-php-8.4-composer-
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
