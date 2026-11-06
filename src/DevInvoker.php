@@ -47,6 +47,9 @@ final class DevInvoker implements InvokerInterface
 
     public const HEADER_QUERY = 'x-query';
 
+    /** Nesting level of requests being invoked, shared because xhprof profiles the whole process */
+    private static int $depth = 0;
+
     public function __construct(
         #[Named('original')]
         private readonly InvokerInterface $invoker,
@@ -82,7 +85,9 @@ final class DevInvoker implements InvokerInterface
 
     private function devInvoke(ResourceObject $resource, AbstractRequest $request): ResourceObject
     {
-        if (extension_loaded('xhprof')) {
+        // xhprof keeps one profile per process, so only the outermost (non-embedded) request profiles.
+        $profiling = self::$depth === 0 && extension_loaded('xhprof');
+        if ($profiling) {
             /** @psalm-suppress UndefinedConstant */
             xhprof_enable(XHPROF_FLAGS_NO_BUILTINS | XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY);
         }
@@ -90,22 +95,34 @@ final class DevInvoker implements InvokerInterface
         $resource->headers[self::HEADER_QUERY] = (string) json_encode($request->query);
         $time = microtime(true);
         $memory = memory_get_usage();
+        self::$depth++;
 
-        $result = $this->invoker->invoke($request);
-
-        // post process for log
-        $resource->headers[self::HEADER_EXECUTION_TIME] = (string) (microtime(true) - $time);
-        $resource->headers[self::HEADER_MEMORY_USAGE] = (string) (memory_get_usage() - $memory);
-        if (extension_loaded('xhprof') && class_exists('XHProfRuns_Default')) {
-            $xhprof = xhprof_disable();
-            $profileId = (new XHProfRuns_Default(sys_get_temp_dir()))->save_run($xhprof, 'resource');
-            assert(is_string($profileId) || is_int($profileId) || $profileId === null);
-            if ($profileId !== null) {
-                $resource->headers[self::HEADER_PROFILE_ID] = (string) $profileId;
+        try {
+            return $this->invoker->invoke($request);
+        } finally {
+            self::$depth--;
+            $resource->headers[self::HEADER_EXECUTION_TIME] = (string) (microtime(true) - $time);
+            $resource->headers[self::HEADER_MEMORY_USAGE] = (string) (memory_get_usage() - $memory);
+            if ($profiling) {
+                $this->saveProfile($resource);
             }
         }
+    }
 
-        return $result;
+    private function saveProfile(ResourceObject $resource): void
+    {
+        $xhprof = xhprof_disable();
+        if (! class_exists('XHProfRuns_Default')) {
+            return; // @codeCoverageIgnore
+        }
+
+        $profileId = (new XHProfRuns_Default(sys_get_temp_dir()))->save_run($xhprof, 'resource');
+        assert(is_string($profileId) || is_int($profileId) || $profileId === null);
+        if ($profileId === null) {
+            return; // @codeCoverageIgnore
+        }
+
+        $resource->headers[self::HEADER_PROFILE_ID] = (string) $profileId;
     }
 
     private function getRo(AbstractRequest $request): ResourceObject
