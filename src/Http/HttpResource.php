@@ -57,8 +57,10 @@ final class HttpResource implements ResourceInterface
 
     private string $logPath;
     private string $baseUri;
+
     /** @var array<string, PhpServer> Servers started per host and index, kept alive for the whole process */
     private static array $servers = [];
+
     private readonly QueryMerger $queryMerger;
     private readonly CreateResponse $createResponse;
     private readonly HrefExtractor $hrefExtractor;
@@ -309,7 +311,14 @@ final class HttpResource implements ResourceInterface
 
     public function request(string $url, string $method, string $curlCommand, string|null $body = null): ResourceObject
     {
-        $output = $this->executeCurl($url, $method, $body);
+        try {
+            $output = $this->executeCurl($url, $method, $body);
+        } catch (HttpRequestException $e) {
+            $this->log([$e->getMessage()], $curlCommand);
+
+            throw $e;
+        }
+
         $uri = new ResourceUri($url);
         $uri->method = $method;
         $ro = ($this->createResponse)($uri, $output);

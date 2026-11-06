@@ -30,7 +30,8 @@ final class CreateResponse
         $headers = $body = [];
         $status = (string) array_shift($output);
         // Skip interim 1xx responses (e.g. "100 Continue"); the final status line follows their blank line.
-        while (preg_match('#^HTTP/\S+\s+1\d\d\b#', $status) === 1) {
+        // 101 Switching Protocols is final for this connection, so it is kept.
+        while (preg_match('#^HTTP/\S+\s+1(?!01\b)\d\d\b#', $status) === 1) {
             do {
                 $line = array_shift($output);
             } while ($line !== null && $line !== '');

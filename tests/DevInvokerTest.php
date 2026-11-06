@@ -12,6 +12,9 @@ use BEAR\Resource\ResourceObject;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function assert;
+use function class_exists;
+
 final class DevInvokerTest extends TestCase
 {
     public function testHeadersAreSetEvenWhenInvocationThrows(): void
@@ -38,16 +41,17 @@ final class DevInvokerTest extends TestCase
     /** @requires extension xhprof */
     public function testOnlyOutermostRequestIsProfiled(): void
     {
+        if (! class_exists('XHProfRuns_Default')) {
+            $this->markTestSkipped('The xhprof/xhprof library (XHProfRuns_Default) is needed to save a profile.');
+        }
+
         $outer = new NullResourceObject();
         $inner = new NullResourceObject();
-        $devInvoker = null;
-        $original = new class ($inner, static function () use (&$devInvoker): DevInvoker {
-            return $devInvoker;
-        }) implements InvokerInterface {
-            /** @param callable(): DevInvoker $devInvoker */
+        $original = new class ($inner) implements InvokerInterface {
+            public DevInvoker|null $devInvoker = null;
+
             public function __construct(
                 private ResourceObject $inner,
-                private $devInvoker,
             ) {
             }
 
@@ -55,7 +59,8 @@ final class DevInvokerTest extends TestCase
             {
                 if ($request->resourceObject !== $this->inner) {
                     // An embedded resource is requested while the outer one runs.
-                    $devInvoker = ($this->devInvoker)();
+                    $devInvoker = $this->devInvoker;
+                    assert($devInvoker instanceof DevInvoker);
                     $devInvoker->invoke(new Request($devInvoker, $this->inner));
                 }
 
@@ -63,6 +68,7 @@ final class DevInvokerTest extends TestCase
             }
         };
         $devInvoker = new DevInvoker($original);
+        $original->devInvoker = $devInvoker;
 
         $devInvoker->invoke(new Request($devInvoker, $outer));
 

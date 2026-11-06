@@ -11,10 +11,12 @@ use BEAR\Resource\ResourceObject;
 use Override;
 use Ray\Aop\WeavedInterface;
 use Ray\Di\Di\Named;
+use Throwable;
 use XHProfRuns_Default;
 
 use function assert;
 use function class_exists;
+use function error_log;
 use function extension_loaded;
 use function is_array;
 use function is_int;
@@ -25,6 +27,7 @@ use function json_encode;
 use function memory_get_usage;
 use function microtime;
 use function property_exists;
+use function sprintf;
 use function sys_get_temp_dir;
 use function xhprof_disable;
 use function xhprof_enable;
@@ -98,14 +101,43 @@ final class DevInvoker implements InvokerInterface
         self::$depth++;
 
         try {
-            return $this->invoker->invoke($request);
-        } finally {
-            self::$depth--;
-            $resource->headers[self::HEADER_EXECUTION_TIME] = (string) (microtime(true) - $time);
-            $resource->headers[self::HEADER_MEMORY_USAGE] = (string) (memory_get_usage() - $memory);
-            if ($profiling) {
-                $this->saveProfile($resource);
-            }
+            $result = $this->invoker->invoke($request);
+        } catch (Throwable $e) {
+            $this->finish($resource, $time, $memory, $profiling, $e);
+
+            throw $e;
+        }
+
+        $this->finish($resource, $time, $memory, $profiling, null);
+
+        return $result;
+    }
+
+    private function finish(
+        ResourceObject $resource,
+        float $time,
+        int $memory,
+        bool $profiling,
+        Throwable|null $pending,
+    ): void {
+        self::$depth--;
+        $resource->headers[self::HEADER_EXECUTION_TIME] = (string) (microtime(true) - $time);
+        $resource->headers[self::HEADER_MEMORY_USAGE] = (string) (memory_get_usage() - $memory);
+        if (! $profiling) {
+            return;
+        }
+
+        if ($pending === null) {
+            $this->saveProfile($resource);
+
+            return;
+        }
+
+        // The resource already failed: never let a profile-save error replace its exception.
+        try {
+            $this->saveProfile($resource);
+        } catch (Throwable $e) {
+            error_log(sprintf('[BEAR.DevTools] XHProf profile was not saved: %s', $e->getMessage()));
         }
     }
 

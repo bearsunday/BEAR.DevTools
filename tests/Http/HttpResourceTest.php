@@ -13,7 +13,9 @@ use PHPUnit\Framework\TestCase;
 use function assert;
 use function dirname;
 use function file_exists;
+use function file_get_contents;
 use function str_repeat;
+use function unlink;
 
 class HttpResourceTest extends TestCase
 {
@@ -222,8 +224,19 @@ class HttpResourceTest extends TestCase
 
     public function testConnectionFailureThrows(): void
     {
-        $this->expectException(HttpRequestException::class);
+        $log = __DIR__ . '/log/test-connection-failure-throws.log';
+        if (file_exists($log)) {
+            unlink($log);
+        }
 
-        $this->resource->request('http://127.0.0.1:1/', 'get', 'curl -s -i http://127.0.0.1:1/');
+        try {
+            $this->resource->request('http://127.0.0.1:1/', 'get', 'curl -s -i http://127.0.0.1:1/');
+            $this->fail('HttpRequestException should be thrown.');
+        } catch (HttpRequestException $e) {
+            $this->assertStringContainsString('http://127.0.0.1:1/', $e->getMessage());
+        }
+
+        $this->assertFileExists($log);
+        $this->assertStringContainsString('curl -s -i http://127.0.0.1:1/', (string) file_get_contents($log));
     }
 }

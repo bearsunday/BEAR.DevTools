@@ -52,4 +52,16 @@ final class CreateResponseTest extends TestCase
         $this->assertSame(['Location' => '/users/1'], $ro->headers);
         $this->assertSame('{"id": 1}', $ro->view);
     }
+
+    public function testSwitchingProtocolsIsFinal(): void
+    {
+        $ro = (new CreateResponse())(new Uri('http://127.0.0.1/'), [
+            'HTTP/1.1 101 Switching Protocols',
+            'Upgrade: websocket',
+            '',
+        ]);
+
+        $this->assertSame(101, $ro->code);
+        $this->assertSame(['Upgrade' => 'websocket'], $ro->headers);
+    }
 }

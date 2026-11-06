@@ -9,6 +9,7 @@ use BEAR\Dev\FakeHalo;
 use BEAR\Resource\NullRenderer;
 use BEAR\Resource\RenderInterface;
 use BEAR\Resource\ResourceObject;
+use BEAR\Resource\Uri;
 use PHPUnit\Framework\TestCase;
 use Ray\Aop\NullInterceptor;
 use Ray\Di\AbstractModule;
@@ -59,7 +60,7 @@ class HaloRendererTest extends TestCase
                 $this->bind(RenderInterface::class)->to(NullRenderer::class);
             }
         }))->getInstance(FakeHalo::class);
-        $ro->uri = 'page://self/dummy';
+        $ro->uri = new Uri('page://self/dummy');
         $view = $renderer->render($ro);
         $this->assertStringStartsWith('<html>', $view);
         $this->assertStringContainsString('<body><!-- resource:', $view);
@@ -120,10 +121,10 @@ class HaloRendererTest extends TestCase
     {
         [$ro, $renderer] = $roRenderer;
         $_GET['halo'] = '1';
-        $ro->uri = 'page://self/dummy?q=<b>';
+        $ro->uri = new Uri('page://self/dummy?q=1&x=2');
         $view = $renderer->render($ro);
 
-        $this->assertStringNotContainsString('?q=<b>', $view);
-        $this->assertStringContainsString('?q=&lt;b&gt;', $view);
+        $this->assertStringNotContainsString('?q=1&x=2', $view);
+        $this->assertStringContainsString('?q=1&amp;x=2', $view);
     }
 }
