@@ -19,13 +19,13 @@ jobs:
           extensions: xhprof
 
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.composer/cache/files
-          key: dependencies-php-8.4-composer-${{ hashFiles('composer.lock') }}
+          key: dependencies-php-8.4-composer-${{ hashFiles('composer.json') }}
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
+        run: composer install --prefer-dist --no-progress
 
       - name: Run CS
         run: composer cs

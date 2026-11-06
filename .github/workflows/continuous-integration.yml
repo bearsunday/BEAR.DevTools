@@ -24,13 +24,13 @@ jobs:
           tools: composer:v2
 
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.composer/cache/files
-          key: dependencies-php-${{ matrix.php-version }}-composer-${{ hashFiles('composer.lock') }}
+          key: dependencies-php-${{ matrix.php-version }}-composer-${{ hashFiles('composer.json') }}
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
+        run: composer install --prefer-dist --no-progress
 
       - name: Run tests
         run: composer test
@@ -65,7 +65,7 @@ jobs:
           Write-Host "XHProf installed and enabled"
 
       - name: Install dependencies (exclude xhprof package on Windows)
-        run: composer remove xhprof/xhprof --dev --no-update && composer install --prefer-dist --no-progress --no-suggest --ignore-platform-reqs
+        run: composer remove xhprof/xhprof --dev --no-update && composer install --prefer-dist --no-progress --ignore-platform-reqs
 
       - name: Run tests
         run: composer test
