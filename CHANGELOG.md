@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HtmlLinkAuditor` could not read single-quoted or unquoted attribute values (e.g. `class='goNext'`)
 - `CreateResponse` split header lines at the last `": "` instead of the first, corrupting values such as `Link: </next>; title="Step: 2"`. Headers without a space after the colon or with an empty value are now kept instead of dropped
 - `HtmlLinkAuditor` and `HrefExtractor` read `data-href` (or any `*-href`/`*-class`/`*-rel`) as the real attribute, and treated links inside HTML comments as rendered affordances. Comments and tags are now scanned in one pass (new internal `HtmlTagScanner`) following the HTML tokenizer (`<!-->`, `<!--->`, `--!>` and unclosed comments), so a `<!--` or `>` inside a quoted attribute value no longer hides the rest of the page or truncates the tag
+- `HtmlLinkAuditor` and `HrefExtractor` read `href=`/`class=`/`rel=` text inside another attribute's value (e.g. `title="see href=/x"`), and `:href`/`xlink:href`, as the real attribute. Attributes are now tokenized into a name/value map following the HTML tokenizer (first duplicate wins, a quote inside an unquoted value is part of the value)
 
 ## [1.4.0] - 2026-06-15
 

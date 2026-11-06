@@ -162,4 +162,34 @@ final class HtmlLinkAuditorTest extends TestCase
 
         $this->assertSame([], $this->logger->warnings);
     }
+
+    public function testNameInsideAnotherAttributeValueIsNotTarget(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next')],
+            '<a title="see href=/next here" href="/other" class="goNext">Next</a>',
+        );
+
+        $this->assertSame(['goNext:target-missing'], $this->logger->warnings);
+    }
+
+    public function testFormWithSingleQuotedUppercaseMethod(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('doCheckout', '/checkout', 'post')],
+            "<form action='/checkout' method='POST' class='doCheckout'></form>",
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
+
+    public function testFormWithValuelessMethodIsGet(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('goNext', '/next')],
+            '<form action="/next" method class="goNext"></form>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
 }

@@ -4,14 +4,8 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Html;
 
-use function html_entity_decode;
 use function is_string;
-use function preg_match;
-use function preg_quote;
 use function strtolower;
-
-use const ENT_HTML5;
-use const ENT_QUOTES;
 
 final readonly class HtmlLinkAuditor
 {
@@ -85,38 +79,25 @@ final readonly class HtmlLinkAuditor
     {
         $affordances = [];
         foreach (HtmlTagScanner::scan($html, ['a', 'area', 'link', 'form']) as ['tag' => $tag, 'attrs' => $attrs]) {
-            $href = $tag === 'form' ? $this->attribute($attrs, 'action') : $this->attribute($attrs, 'href');
+            $href = $tag === 'form' ? $attrs['action'] ?? null : $attrs['href'] ?? null;
             if ($href === null || $href === '') {
                 continue;
             }
 
-            $method = $tag === 'form' ? strtolower($this->attribute($attrs, 'method') ?? 'get') : 'get';
+            // A form's missing or empty method attribute means GET.
+            $method = $tag === 'form' ? strtolower($attrs['method'] ?? '') : '';
+            if ($method === '') {
+                $method = 'get';
+            }
+
             $affordances[] = new HtmlAffordance(
                 $href,
                 $method,
-                $this->attribute($attrs, 'rel') ?? '',
-                $this->attribute($attrs, 'class') ?? '',
+                $attrs['rel'] ?? '',
+                $attrs['class'] ?? '',
             );
         }
 
         return $affordances;
-    }
-
-    private function attribute(string $attrs, string $name): string|null
-    {
-        if (preg_match('/(?<![\w-])' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $attrs, $match) !== 1) {
-            return null;
-        }
-
-        $value = $match[1];
-        if ($value === '' && isset($match[2])) {
-            $value = $match[2];
-        }
-
-        if ($value === '' && isset($match[3])) {
-            $value = $match[3];
-        }
-
-        return html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
     }
 }
