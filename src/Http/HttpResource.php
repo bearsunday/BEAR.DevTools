@@ -60,7 +60,6 @@ final class HttpResource implements ResourceInterface
 
     /** @var array<string, PhpServer> Servers started per host and index, kept alive for the whole process */
     private static array $servers = [];
-
     private readonly QueryMerger $queryMerger;
     private readonly CreateResponse $createResponse;
     private readonly HrefExtractor $hrefExtractor;
