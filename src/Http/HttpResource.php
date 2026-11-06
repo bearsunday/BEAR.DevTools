@@ -34,6 +34,7 @@ use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
 use function strtolower;
+use function strlen;
 use function strtoupper;
 use function trim;
 
@@ -48,10 +49,12 @@ use const DIRECTORY_SEPARATOR;
 use const FILE_APPEND;
 use const JSON_THROW_ON_ERROR;
 use const PHP_EOL;
+use const PHP_OS_FAMILY;
 
 final class HttpResource implements ResourceInterface
 {
     private const CONNECT_TIMEOUT = 10;
+    private const WINDOWS_ARG_MAX = 8000;
 
     private string $logPath;
     private string $baseUri;
@@ -243,11 +246,26 @@ final class HttpResource implements ResourceInterface
             'curl -s -i -H %s -X %s -d %s %s',
             escapeshellarg('Content-Type:application/json'),
             escapeshellarg($method),
-            escapeshellarg($json),
+            self::shellArg($json),
             escapeshellarg($url),
         );
 
         return $this->request($url, $method, $curlCommand, $json);
+    }
+
+    /**
+     * Quote an argument for the logged curl command.
+     *
+     * escapeshellarg() rejects arguments of 8192 bytes or more on Windows (ValueError); such a body could not be
+     * passed on a Windows command line anyway, so the log shows its size instead of failing the request.
+     */
+    private static function shellArg(string $arg): string
+    {
+        if (PHP_OS_FAMILY === 'Windows' && strlen($arg) > self::WINDOWS_ARG_MAX) {
+            return escapeshellarg(sprintf('<%d bytes omitted>', strlen($arg)));
+        }
+
+        return escapeshellarg($arg);
     }
 
     /** @param array<string> $output */
@@ -320,9 +338,7 @@ final class HttpResource implements ResourceInterface
         $this->log($output, $curlCommand);
         $uri = new ResourceUri($url);
         $uri->method = $method;
-        $ro = ($this->createResponse)($uri, $output);
-
-        return $ro;
+        return ($this->createResponse)($uri, $output);
     }
 
     /**

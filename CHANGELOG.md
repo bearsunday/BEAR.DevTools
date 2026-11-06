@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HtmlLinkAuditor` and `HrefExtractor` read `href=`/`class=`/`rel=` text inside another attribute's value (e.g. `title="see href=/x"`), and `:href`/`xlink:href`, as the real attribute. Attributes are now tokenized into a name/value map following the HTML tokenizer (first duplicate wins, a quote inside an unquoted value is part of the value)
 - `CreateResponse` read an interim `HTTP/1.1 100 Continue` as the final status; interim 1xx responses are now skipped, and `HttpResource` no longer sends `Expect: 100-continue`
 - `DevInvoker` restarted the XHProf profile on every embedded request, cutting the outer profile short, and left XHProf enabled when a resource threw. Only the outermost request is profiled now, and timing headers are set in a `finally` block
+- `HttpResource` crashed with `ValueError` on Windows when a POST/PUT/PATCH/DELETE body was 8 KB or larger, because `escapeshellarg()` rejects such arguments there; the logged curl command now shows the body size instead
 - `HaloRenderer` returned the view without the dev tools CSS/JS (only `$ro->view` had them), and printed the resource URI, State tab, file paths and profile id without HTML escaping. Interceptors are now listed for every method, not only `onGet`
 
 ### Changed
