@@ -43,7 +43,6 @@ use const CURLOPT_HEADER;
 use const CURLOPT_HTTPHEADER;
 use const CURLOPT_POSTFIELDS;
 use const CURLOPT_RETURNTRANSFER;
-use const CURLOPT_TIMEOUT;
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
 use const DIRECTORY_SEPARATOR;
 use const FILE_APPEND;
@@ -53,7 +52,6 @@ use const PHP_EOL;
 final class HttpResource implements ResourceInterface
 {
     private const CONNECT_TIMEOUT = 10;
-    private const TIMEOUT = 30;
 
     private string $logPath;
     private string $baseUri;
@@ -340,8 +338,8 @@ final class HttpResource implements ResourceInterface
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, true);
+        // Only the connection is time-limited: a slow response (or a server paused in a debugger) is waited for.
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::CONNECT_TIMEOUT);
-        curl_setopt($ch, CURLOPT_TIMEOUT, self::TIMEOUT);
 
         $upperMethod = strtoupper($method);
         if ($upperMethod !== 'GET' && $upperMethod !== '') {

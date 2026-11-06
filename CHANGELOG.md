@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HaloRenderer` returned the view without the dev tools CSS/JS (only `$ro->view` had them), and printed the resource URI, State tab, file paths and profile id without HTML escaping. Interceptors are now listed for every method, not only `onGet`
 
 ### Changed
-- `HttpResource` throws the new `BEAR\Dev\Http\Exception\HttpRequestException` when no HTTP response arrives (connection refused, timeout) instead of returning a fake `200` response, and sets connect/total timeouts (10 s / 30 s)
+- `HttpResource` throws the new `BEAR\Dev\Http\Exception\HttpRequestException` when no HTTP response arrives (connection refused, timeout) instead of returning a fake `200` response (also when the output has no HTTP status line), and sets a 10 s connect timeout. There is no total timeout, so a slow response or a server paused in a debugger is still waited for
 
 ## [1.4.0] - 2026-06-15
 

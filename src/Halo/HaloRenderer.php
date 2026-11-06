@@ -335,7 +335,10 @@ EOT;
 
     private static function editorUrl(string $file): string
     {
-        return self::escape('phpstorm://open?file=' . str_replace('%2F', '/', rawurlencode($file)));
+        // Keep path separators and drive letters readable (`/`, `\`, `C:`); encode the rest.
+        $path = str_replace(['%2F', '%5C', '%3A'], ['/', '\\', ':'], rawurlencode($file));
+
+        return self::escape('phpstorm://open?file=' . $path);
     }
 
     public function setHaloCookie(): void

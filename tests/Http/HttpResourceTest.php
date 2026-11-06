@@ -214,12 +214,15 @@ class HttpResourceTest extends TestCase
         $this->assertStringContainsString('"method": "onPost"', $ro->view);
     }
 
-    public function testLargePostBodyIsNotAnsweredWithContinue(): void
+    public function testLargePostBodyDoesNotSendExpectContinue(): void
     {
-        $ro = $this->resource->post('/', ['payload' => str_repeat('x', 4096)]);
+        // cURL adds "Expect: 100-continue" for bodies over 1 MiB and then waits for a 100 response.
+        $resource = new HttpResource('127.0.0.1:18083', dirname(__DIR__) . '/Fake/expect-echo.php', __DIR__ . '/log');
+        $ro = $resource->post('/', ['payload' => str_repeat('x', 1_100_000)]);
 
         $this->assertSame(200, $ro->code);
-        $this->assertStringContainsString('"method": "onPost"', $ro->view);
+        $this->assertNull($ro->body['expect']);
+        $this->assertGreaterThan(1_100_000, $ro->body['length']);
     }
 
     public function testConnectionFailureThrows(): void

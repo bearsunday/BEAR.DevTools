@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Http;
 
+use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Resource\NullResourceObject;
 use BEAR\Resource\ResourceObject;
 use BEAR\Resource\Uri;
 
-use function array_key_exists;
 use function array_pop;
 use function array_shift;
 use function count;
@@ -16,6 +16,7 @@ use function end;
 use function implode;
 use function json_decode;
 use function preg_match;
+use function sprintf;
 
 use const PHP_EOL;
 
@@ -37,6 +38,10 @@ final class CreateResponse
             } while ($line !== null && $line !== '');
 
             $status = (string) array_shift($output);
+        }
+
+        if (preg_match('#^HTTP/\S+\s+\d{3}\b#', $status) !== 1) {
+            throw new HttpRequestException(sprintf('%s: no HTTP status line in the response', (string) $uri));
         }
 
         do {
@@ -70,13 +75,9 @@ final class CreateResponse
 
     private function getCode(string $status): int
     {
-        preg_match('/\d{3}/', $status, $match);
-        if (! array_key_exists(0, $match)) {
-            // Default to 200 OK if no status code is found
-            return 200;
-        }
+        preg_match('#^HTTP/\S+\s+(\d{3})#', $status, $match);
 
-        return (int) $match[0];
+        return (int) ($match[1] ?? 0);
     }
 
     /**

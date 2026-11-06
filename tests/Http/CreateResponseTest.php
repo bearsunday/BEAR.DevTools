@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Http;
 
+use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Resource\Uri;
 use PHPUnit\Framework\TestCase;
 
@@ -63,5 +64,31 @@ final class CreateResponseTest extends TestCase
 
         $this->assertSame(101, $ro->code);
         $this->assertSame(['Upgrade' => 'websocket'], $ro->headers);
+    }
+
+    public function testSeveralInterimResponsesAreSkipped(): void
+    {
+        $ro = (new CreateResponse())(new Uri('http://127.0.0.1/'), [
+            'HTTP/1.1 100 Continue',
+            '',
+            'HTTP/1.1 103 Early Hints',
+            'Link: </style.css>; rel=preload',
+            '',
+            'HTTP/1.1 200 OK',
+            'X-A: 1',
+            '',
+            '{"a":1}',
+        ]);
+
+        $this->assertSame(200, $ro->code);
+        $this->assertSame(['X-A' => '1'], $ro->headers);
+        $this->assertSame('{"a":1}', $ro->view);
+    }
+
+    public function testMissingFinalStatusLineThrows(): void
+    {
+        $this->expectException(HttpRequestException::class);
+
+        (new CreateResponse())(new Uri('http://127.0.0.1/'), ['HTTP/1.1 100 Continue', '']);
     }
 }
