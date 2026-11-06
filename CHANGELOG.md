@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0.html),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.5.0] - 2026-11-06
 
 ### Fixed
 - `HtmlLinkAuditor` reported every link as `target-missing` when the HTML contained more than one `<a>`/`<area>`/`<link>`/`<form>` tag
@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HtmlLinkAuditor` and `HrefExtractor` read `data-href` (or any `*-href`/`*-class`/`*-rel`) as the real attribute, and treated links inside HTML comments as rendered affordances. Comments and tags are now scanned in one pass (new internal `HtmlTagScanner`) following the HTML tokenizer (`<!-->`, `<!--->`, `--!>` and unclosed comments), so a `<!--` or `>` inside a quoted attribute value no longer hides the rest of the page or truncates the tag
 - `HtmlLinkAuditor` and `HrefExtractor` read `href=`/`class=`/`rel=` text inside another attribute's value (e.g. `title="see href=/x"`), and `:href`/`xlink:href`, as the real attribute. Attributes are now tokenized into a name/value map following the HTML tokenizer (first duplicate wins, a quote inside an unquoted value is part of the value)
 - `CreateResponse` read an interim `HTTP/1.1 100 Continue` as the final status; interim 1xx responses are now skipped, and `HttpResource` no longer sends `Expect: 100-continue`
-- `DevInvoker` restarted the XHProf profile on every embedded request, cutting the outer profile short, and left XHProf enabled when a resource threw. Only the outermost request is profiled now, and timing headers are set in a `finally` block
+- `DevInvoker` restarted the XHProf profile on every embedded request, cutting the outer profile short, and left XHProf enabled when a resource threw. Only the outermost request is profiled now, timing headers are set even when the resource throws, and a failure to save the profile is logged with `error_log()` instead of replacing the request's result
 - `HttpResource` crashed (fatal error, or `ValueError` on PHP 8.4+) while building the logged curl command when the request body or URL was longer than the platform command line limit (about 8 KB on Windows, 1 MiB on macOS), because `escapeshellarg()` rejects such arguments; arguments over 8000 bytes are now logged as their size instead
 - `HaloRenderer` returned the view without the dev tools CSS/JS (only `$ro->view` had them), and printed the resource URI, State tab, file paths and profile id without HTML escaping. Interceptors are now listed for every method, not only `onGet`
 
