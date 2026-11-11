@@ -23,14 +23,19 @@ jobs:
           extensions: xhprof
           tools: composer:v2
 
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
-          path: ~/.composer/cache/files
-          key: dependencies-php-${{ matrix.php-version }}-composer-${{ hashFiles('composer.lock') }}
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: dependencies-php-${{ matrix.php-version }}-composer-${{ hashFiles('composer.json') }}
+          restore-keys: dependencies-php-${{ matrix.php-version }}-composer-
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
+        run: composer install --prefer-dist --no-progress
 
       - name: Run tests
         run: composer test
@@ -65,7 +70,7 @@ jobs:
           Write-Host "XHProf installed and enabled"
 
       - name: Install dependencies (exclude xhprof package on Windows)
-        run: composer remove xhprof/xhprof --dev --no-update && composer install --prefer-dist --no-progress --no-suggest --ignore-platform-reqs
+        run: composer remove xhprof/xhprof --dev --no-update && composer install --prefer-dist --no-progress --ignore-platform-reqs
 
       - name: Run tests
         run: composer test
