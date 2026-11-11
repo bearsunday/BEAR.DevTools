@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `HttpResource` throws the new `BEAR\Dev\Http\Exception\HttpRequestException` when no HTTP response arrives (connection refused, timeout) instead of returning a fake `200` response (also when the output has no HTTP status line), and sets a 10 s connect timeout. There is no total timeout, so a slow response or a server paused in a debugger is still waited for
-- devtools no longer requires PHPUnit; an application chooses its own PHPUnit version, and `AbstractWorkflowTest` works with PHPUnit 10.5 to 13.4
+- devtools no longer requires PHPUnit; an application chooses its own PHPUnit version, and `AbstractWorkflowTest` works with PHPUnit 10.5 to 13.4. An application that got PHPUnit only through devtools adds `phpunit/phpunit` to its own `require-dev`
 
 ## [1.4.0] - 2026-06-15
 

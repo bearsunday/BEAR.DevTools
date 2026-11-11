@@ -8,6 +8,7 @@ use BEAR\Dev\Http\AbstractWorkflowTest;
 use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
 use MyVendor\MyProject\Injector;
+use PHPUnit\Framework\Attributes\Depends;
 
 use function assert;
 
@@ -29,9 +30,7 @@ class WorkflowTest extends AbstractWorkflowTest
         return $index;
     }
 
-    /**
-     * @depends testIndex
-     */
+    #[Depends('testIndex')]
     public function testNext(ResourceObject $response): ResourceObject
     {
         return $this->follow($response, 'next');
