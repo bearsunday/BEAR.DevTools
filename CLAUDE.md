@@ -59,7 +59,7 @@ $ro = $resource->post('/users', ['name' => 'John', 'email' => 'john@example.com'
 ### Dependencies
 - **Core**: PHP 8.2+, BEAR.Sunday framework components (bear/resource, ray/di, ray/aop)
 - **HTTP Server**: koriym/php-server for built-in server functionality
-- **Testing**: phpunit/phpunit (a runtime dependency, because `AbstractWorkflowTest` is a public test base class)
+- **Testing**: phpunit/phpunit (require-dev, `^10.5 || ^11.5 || ^12.5 || ^13.4`); an application chooses its own PHPUnit, and `AbstractWorkflowTest` works with any of those versions
 - **Profiling**: XHProf integration (optional, via require-dev)
 
 ### File Structure
