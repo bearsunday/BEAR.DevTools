@@ -6,6 +6,7 @@ namespace BEAR\Dev\Halo;
 
 use BEAR\Resource\ResourceInterface;
 use MyVendor\MyProject\Injector;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class HaloModuleTest extends TestCase
@@ -26,7 +27,7 @@ class HaloModuleTest extends TestCase
     }
 
     /** @return array<array<string>> */
-    public function pageProvider(): array
+    public static function pageProvider(): array
     {
         return [
             ['page://self/'],
@@ -34,7 +35,7 @@ class HaloModuleTest extends TestCase
         ];
     }
 
-    /** @dataProvider pageProvider */
+    #[DataProvider('pageProvider')]
     public function testModule(string $uri): void
     {
         $_GET['halo'] = '1';

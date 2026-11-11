@@ -10,6 +10,7 @@ use BEAR\Resource\NullRenderer;
 use BEAR\Resource\RenderInterface;
 use BEAR\Resource\ResourceObject;
 use BEAR\Resource\Uri;
+use PHPUnit\Framework\Attributes\Depends;
 use PHPUnit\Framework\TestCase;
 use Ray\Aop\NullInterceptor;
 use Ray\Di\AbstractModule;
@@ -68,11 +69,8 @@ class HaloRendererTest extends TestCase
         return [$ro, $renderer];
     }
 
-    /**
-     * @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer
-     *
-     * @depends testRender
-     */
+    /** @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer */
+    #[Depends('testRender')]
     public function testRenderWithHaloBodyString(array $roRenderer): void
     {
         [$ro, $renderer] = $roRenderer;
@@ -81,11 +79,8 @@ class HaloRendererTest extends TestCase
         $this->assertStringContainsString('<p>Hello World!</p>', $view);
     }
 
-    /**
-     * @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer
-     *
-     * @depends testRender
-     */
+    /** @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer */
+    #[Depends('testRender')]
     public function testRenderReturnsViewWithDevTools(array $roRenderer): void
     {
         [$ro, $renderer] = $roRenderer;
@@ -96,11 +91,8 @@ class HaloRendererTest extends TestCase
         $this->assertSame($ro->view, $view);
     }
 
-    /**
-     * @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer
-     *
-     * @depends testRender
-     */
+    /** @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer */
+    #[Depends('testRender')]
     public function testStateIsEscaped(array $roRenderer): void
     {
         [$ro, $renderer] = $roRenderer;
@@ -112,11 +104,8 @@ class HaloRendererTest extends TestCase
         $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $view);
     }
 
-    /**
-     * @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer
-     *
-     * @depends testRender
-     */
+    /** @param array{0:ResourceObject, 1:HaloRenderer} $roRenderer */
+    #[Depends('testRender')]
     public function testResourceUriIsEscaped(array $roRenderer): void
     {
         [$ro, $renderer] = $roRenderer;
