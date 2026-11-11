@@ -9,6 +9,7 @@ use BEAR\Resource\InvokerInterface;
 use BEAR\Resource\NullResourceObject;
 use BEAR\Resource\Request;
 use BEAR\Resource\ResourceObject;
+use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -38,7 +39,7 @@ final class DevInvokerTest extends TestCase
         $this->assertArrayHasKey(DevInvoker::HEADER_MEMORY_USAGE, $ro->headers);
     }
 
-    /** @requires extension xhprof */
+    #[RequiresPhpExtension('xhprof')]
     public function testOnlyOutermostRequestIsProfiled(): void
     {
         if (! class_exists('XHProfRuns_Default')) {

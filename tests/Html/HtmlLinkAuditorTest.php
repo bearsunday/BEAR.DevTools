@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Html;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class HtmlLinkAuditorTest extends TestCase
@@ -125,7 +126,7 @@ final class HtmlLinkAuditorTest extends TestCase
         ];
     }
 
-    /** @dataProvider commentEdgeCaseProvider */
+    #[DataProvider('commentEdgeCaseProvider')]
     public function testLinkAfterEarlyClosedCommentIsTarget(string $html): void
     {
         $this->auditor->audit([new LinkHeader('goNext', '/next')], $html);
