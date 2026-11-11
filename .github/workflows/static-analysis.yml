@@ -41,5 +41,5 @@ jobs:
           curl -L https://github.com/maglnet/ComposerRequireChecker/releases/latest/download/composer-require-checker.phar -o composer-require-checker.phar
           chmod +x composer-require-checker.phar
 
-      - name: Run composer-require-checker without config
-        run: ./composer-require-checker.phar check ./composer.json
+      - name: Run composer-require-checker
+        run: ./composer-require-checker.phar check --config-file=composer-require-checker.json ./composer.json
