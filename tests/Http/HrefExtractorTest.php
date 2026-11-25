@@ -79,6 +79,24 @@ final class HrefExtractorTest extends TestCase
         $this->assertSame('/next"x', (new HrefExtractor())->href('goNext', $this->ro('<a href=/next"x class=goNext>N</a>')));
     }
 
+    public function testHalLinkCarriesItsMethod(): void
+    {
+        $ro = $this->ro('');
+        $ro->body = ['_links' => ['doCreate' => ['href' => '/item', 'method' => 'post']]];
+        $link = (new HrefExtractor())->link('doCreate', $ro);
+
+        $this->assertSame(['/item', 'post'], [$link?->href, $link?->method]);
+    }
+
+    public function testLinkHeaderCarriesItsMethod(): void
+    {
+        $ro = $this->ro('<p>no link</p>');
+        $ro->headers = ['Link' => '</next>; rel="goNext", </item>; rel="doCreate"; method="post"'];
+        $link = (new HrefExtractor())->link('doCreate', $ro);
+
+        $this->assertSame(['/item', 'post'], [$link?->href, $link?->method]);
+    }
+
     private function ro(string $view): NullResourceObject
     {
         $ro = new NullResourceObject();

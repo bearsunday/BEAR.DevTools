@@ -151,6 +151,23 @@ class WorkflowTest extends Workflow
 }
 ```
 
+A request URI can carry the links to follow in a `#link=` fragment, as bear/resource reads it. HTTP does not send
+a fragment, so `HttpResource` follows the links itself, and the same test runs in process and over HTTP:
+
+```php
+public function testCreateAndUpdate(): void
+{
+    // POST doCreate and follow its 201 Location, follow goForm, PUT doUpdate and follow its 303 Location
+    $item = $this->resource->get('/form#link=self:doCreate?name=koriym,self:goForm,self:doUpdate?id=3');
+
+    $this->assertSame(3, $this->bodyValue($item, 'id'));
+}
+```
+
+`HttpResource` finds a rel and its method in the HAL `_links`, then in an HTML `<a>`, `<area>` or `<link>` (GET),
+then in the `Link` header (its `method` parameter). For an HTML page, `LinkHeaderModule` writes every declared
+`#[Link]`, unsafe ones included, into the `Link` header. A crawl link is not followed over HTTP.
+
 ## Requirements
 
 - PHP 8.2 or higher

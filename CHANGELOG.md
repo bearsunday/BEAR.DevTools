@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0.html),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `HttpResource` follows the links of a `#link=` fragment, which HTTP does not send, with the method the representation gives each rel, and the `Location` of a 303 or a 201 as bear/resource does; a workflow test written with `#link=` runs unchanged over HTTP.
+- `HrefExtractor::link()` returns a rel's href and method from HAL `_links`, HTML or the `Link` header.
+
 ## [1.5.0] - 2026-11-11
 
 ### Fixed

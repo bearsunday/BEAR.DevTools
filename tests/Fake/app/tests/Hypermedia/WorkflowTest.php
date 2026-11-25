@@ -35,4 +35,13 @@ class WorkflowTest extends AbstractWorkflowTest
     {
         return $this->follow($response, 'next');
     }
+
+    /** POST a link and follow its 201 Location, then follow a link, then PUT a link and follow its 303 Location */
+    public function testLinksInTheUri(): void
+    {
+        $item = $this->resource->get('/form#link=self:doCreate?name=koriym,self:goForm,self:doUpdate?id=3');
+
+        $this->assertSame(200, $item->code);
+        $this->assertSame(3, $this->bodyValue($item, 'id'));
+    }
 }

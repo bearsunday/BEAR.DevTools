@@ -7,6 +7,10 @@ namespace BEAR\Dev\Http;
 use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
 use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Dev\QueryMerger;
+use BEAR\Resource\Code;
+use BEAR\Resource\Exception\LinkException;
+use BEAR\Resource\Exception\LinkRelException;
+use BEAR\Resource\LinkType;
 use BEAR\Resource\RequestInterface;
 use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
@@ -15,6 +19,7 @@ use Koriym\PhpServer\PhpServer;
 use LogicException;
 use Override;
 
+use function array_merge;
 use function curl_error;
 use function curl_exec;
 use function curl_init;
@@ -27,8 +32,10 @@ use function file_put_contents;
 use function http_build_query;
 use function implode;
 use function in_array;
+use function is_array;
 use function is_string;
 use function json_encode;
+use function preg_match;
 use function preg_replace;
 use function sprintf;
 use function str_ends_with;
@@ -54,6 +61,9 @@ final class HttpResource implements ResourceInterface
 {
     private const CONNECT_TIMEOUT = 10;
     private const LOGGED_ARG_MAX = 8000;
+
+    /** A Location a link follows: a path on this server */
+    private const LOCATION_PATH = '#\A/(?!/)#';
 
     private string $logPath;
     private string $baseUri;
@@ -162,7 +172,7 @@ final class HttpResource implements ResourceInterface
     #[Override]
     public function get(string $uri, array $query = []): ResourceObject
     {
-        return $this->safeRequest($uri, $query);
+        return $this->linked('GET', $uri, $query);
     }
 
     /**
@@ -171,7 +181,7 @@ final class HttpResource implements ResourceInterface
     #[Override]
     public function post(string $uri, array $query = []): ResourceObject
     {
-        return $this->unsafeRequest('POST', $uri, $query);
+        return $this->linked('POST', $uri, $query);
     }
 
     /**
@@ -180,7 +190,7 @@ final class HttpResource implements ResourceInterface
     #[Override]
     public function put(string $uri, array $query = []): ResourceObject
     {
-        return $this->unsafeRequest('PUT', $uri, $query);
+        return $this->linked('PUT', $uri, $query);
     }
 
     /**
@@ -189,7 +199,7 @@ final class HttpResource implements ResourceInterface
     #[Override]
     public function patch(string $uri, array $query = []): ResourceObject
     {
-        return $this->unsafeRequest('PATCH', $uri, $query);
+        return $this->linked('PATCH', $uri, $query);
     }
 
     /**
@@ -198,7 +208,7 @@ final class HttpResource implements ResourceInterface
     #[Override]
     public function delete(string $uri, array $query = []): ResourceObject
     {
-        return $this->unsafeRequest('DELETE', $uri, $query);
+        return $this->linked('DELETE', $uri, $query);
     }
 
     /**
@@ -250,6 +260,110 @@ final class HttpResource implements ResourceInterface
         );
 
         return $this->request($url, $method, $curlCommand, $json);
+    }
+
+    /**
+     * Sends a request and follows the links of its `#link=` fragment, which HTTP does not carry to the server
+     *
+     * The links are followed as bear/resource follows them in process, from the rels the representation carries.
+     *
+     * @param array<string, mixed> $query
+     */
+    private function linked(string $method, string $uri, array $query): ResourceObject
+    {
+        $links = LinkType::listFromUri($uri);
+        $response = $this->send($method, $uri, $query);
+        if ($links === []) {
+            return $response;
+        }
+
+        $current = $this->located($response);
+        foreach ($links as $link) {
+            if ($current->code >= Code::BAD_REQUEST) {
+                return $current;
+            }
+
+            $linked = $this->located($this->follow($link, $current));
+            if ($link->type === LinkType::NEW_LINK) {
+                $body = is_array($current->body) ? $current->body : [];
+                $body[$link->key] = $linked->body;
+                $current->body = $body;
+
+                continue;
+            }
+
+            $current = $linked;
+        }
+
+        return $current;
+    }
+
+    /** @param array<string, mixed> $query */
+    private function send(string $method, string $uri, array $query): ResourceObject
+    {
+        return $method === 'GET' ? $this->safeRequest($uri, $query) : $this->unsafeRequest($method, $uri, $query);
+    }
+
+    /**
+     * Requests the rel's href with the method the representation gives it
+     *
+     * The link query is overlaid on the query of the href, as bear/resource overlays it on the expanded href.
+     */
+    private function follow(LinkType $link, ResourceObject $current): ResourceObject
+    {
+        if ($link->type === LinkType::CRAWL_LINK) {
+            throw new LogicException(sprintf('A crawl link (%s) is not followed over HTTP', $link->key));
+        }
+
+        $found = $this->hrefExtractor->link($link->key, $current);
+        if ($found === null) {
+            throw new LinkRelException(sprintf('rel:%s uri:%s', $link->key, (string) $current->uri), 500);
+        }
+
+        $href = ($this->queryMerger)($found->href, []);
+
+        return $this->send(strtoupper($found->method), $href->path, array_merge($href->query, $link->query));
+    }
+
+    /**
+     * The resource that answers a response
+     *
+     * A 303, or a 201 with a Location, is answered by the resource its Location names, requested once with GET.
+     */
+    private function located(ResourceObject $response): ResourceObject
+    {
+        if (! $this->redirects($response)) {
+            return $response;
+        }
+
+        $location = $this->header($response, 'Location');
+        if ($location === null || preg_match(self::LOCATION_PATH, $location) !== 1) {
+            throw new LinkException(sprintf('%s answered %d with the Location %s; a link follows only a path', (string) $response->uri, $response->code, $location ?? '(none)'), 500);
+        }
+
+        $located = $this->safeRequest($location, []);
+        if ($this->redirects($located)) {
+            throw new LinkException(sprintf('%s, the Location of %s, redirects again; a link follows one Location', (string) $located->uri, (string) $response->uri), 500);
+        }
+
+        return $located;
+    }
+
+    /** A 303, or a 201 that names the created resource in a Location */
+    private function redirects(ResourceObject $ro): bool
+    {
+        return $ro->code === Code::SEE_OTHER || ($ro->code === Code::CREATED && $this->header($ro, 'Location') !== null);
+    }
+
+    private function header(ResourceObject $ro, string $name): string|null
+    {
+        foreach ($ro->headers as $header => $value) {
+            if (strtolower($header) === strtolower($name)) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     /**
