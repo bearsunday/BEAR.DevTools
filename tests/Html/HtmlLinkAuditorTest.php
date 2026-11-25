@@ -193,4 +193,35 @@ final class HtmlLinkAuditorTest extends TestCase
 
         $this->assertSame([], $this->logger->warnings);
     }
+
+    public function testUnsafeLinkOtherThanPostIsAPostForm(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('doUpdate', '/item', 'put')],
+            '<form action="/item" method="post" class="doUpdate"></form>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
+
+    /** A browser submits a form whose method is neither GET nor POST with GET */
+    public function testFormMethodOtherThanPostIsGet(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('doUpdate', '/item', 'put')],
+            '<form action="/item" method="put" class="doUpdate"></form>',
+        );
+
+        $this->assertSame(['doUpdate:method-mismatch'], $this->logger->warnings);
+    }
+
+    public function testMethodOverrideIsReported(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('doUpdate', '/item', 'put')],
+            '<form action="/item" method="post" class="doUpdate"><input type="hidden" name="_method" value="put"></form>',
+        );
+
+        $this->assertSame(['doUpdate:method-override'], $this->logger->warnings);
+    }
 }

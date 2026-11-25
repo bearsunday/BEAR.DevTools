@@ -50,7 +50,8 @@ final readonly class HtmlLinkAuditor
         }
 
         $methodMatches = [];
-        $method = strtolower($link->method);
+        // HTML has no PUT or DELETE: a link that is not a GET is a POST form
+        $method = strtolower($link->method) === 'get' ? 'get' : 'post';
         foreach ($targetMatches as $affordance) {
             if ($affordance->method !== $method) {
                 continue;
@@ -66,9 +67,15 @@ final readonly class HtmlLinkAuditor
         }
 
         foreach ($methodMatches as $affordance) {
-            if ($affordance->hasToken($link->rel)) {
-                return;
+            if (! $affordance->hasToken($link->rel)) {
+                continue;
             }
+
+            if (isset($affordance->hidden[HtmlAffordance::METHOD_OVERRIDE])) {
+                $this->logger->warning($link, 'method-override');
+            }
+
+            return;
         }
 
         $this->logger->warning($link, 'semantic-token-missing');

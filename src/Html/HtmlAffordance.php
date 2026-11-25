@@ -13,6 +13,9 @@ use function trim;
 
 final readonly class HtmlAffordance
 {
+    /** The hidden input that would turn a POST form into another method; an HTML form submits GET or POST only */
+    public const METHOD_OVERRIDE = '_method';
+
     /** @param array<string, string> $hidden The hidden inputs of a form, which a browser sends with it */
     public function __construct(
         public string $href,
@@ -54,11 +57,8 @@ final readonly class HtmlAffordance
                 continue;
             }
 
-            // A form's missing or empty method attribute means GET.
-            $method = $tag === 'form' ? strtolower($attrs['method'] ?? '') : '';
-            if ($method === '') {
-                $method = 'get';
-            }
+            // A form submits GET or POST: a missing or any other method attribute is GET, as a browser reads it.
+            $method = $tag === 'form' && strtolower($attrs['method'] ?? '') === 'post' ? 'post' : 'get';
 
             $found[] = [$href, $method, $attrs['rel'] ?? '', $attrs['class'] ?? ''];
             if ($tag !== 'form') {
