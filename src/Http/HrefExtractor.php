@@ -37,6 +37,20 @@ final class HrefExtractor
             ?? $this->linkHeaderLink($rel, $ro->headers);
     }
 
+    /**
+     * The hidden inputs of the form the rel's link is read from; none for a link read from elsewhere
+     *
+     * @return array<string, string>
+     */
+    public function hidden(string $rel, ResourceObject $ro): array
+    {
+        if ($this->halLink($rel, $ro) !== null) {
+            return [];
+        }
+
+        return $this->htmlAffordance($rel, $ro->view)->hidden ?? [];
+    }
+
     private function halLink(string $rel, ResourceObject $ro): LinkHeader|null
     {
         $body = is_array($ro->body) ? $ro->body : [];
@@ -66,13 +80,20 @@ final class HrefExtractor
 
     private function semanticHtmlLink(string $rel, string|null $view): LinkHeader|null
     {
+        $affordance = $this->htmlAffordance($rel, $view);
+
+        return $affordance === null ? null : new LinkHeader($rel, $affordance->href, $affordance->method);
+    }
+
+    private function htmlAffordance(string $rel, string|null $view): HtmlAffordance|null
+    {
         if (! is_string($view) || $view === '') {
             return null;
         }
 
         foreach (HtmlAffordance::listFromHtml($view) as $affordance) {
             if ($affordance->hasToken($rel)) {
-                return new LinkHeader($rel, $affordance->href, $affordance->method);
+                return $affordance;
             }
         }
 

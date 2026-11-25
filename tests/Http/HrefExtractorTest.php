@@ -106,6 +106,17 @@ final class HrefExtractorTest extends TestCase
         $this->assertSame(['/item', 'post'], [$link?->href, $link?->method]);
     }
 
+    public function testHiddenInputsAreThoseOfTheFormTheLinkIsReadFrom(): void
+    {
+        $ro = $this->ro(
+            '<form class="doCreate" method="post" action="/item">'
+            . '<input type="hidden" name="csrfToken" value="t1"><input type="text" name="title" value="typed">'
+            . '</form><input type="hidden" name="outside" value="x">',
+        );
+
+        $this->assertSame(['csrfToken' => 't1'], (new HrefExtractor())->hidden('doCreate', $ro));
+    }
+
     private function ro(string $view): NullResourceObject
     {
         $ro = new NullResourceObject();

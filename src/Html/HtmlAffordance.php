@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Html;
 
+use function count;
 use function in_array;
 use function is_array;
 use function preg_split;
@@ -12,11 +13,13 @@ use function trim;
 
 final readonly class HtmlAffordance
 {
+    /** @param array<string, string> $hidden The hidden inputs of a form, which a browser sends with it */
     public function __construct(
         public string $href,
         public string $method,
         public string $rel = '',
         public string $class = '',
+        public array $hidden = [],
     ) {
     }
 
@@ -27,8 +30,25 @@ final readonly class HtmlAffordance
      */
     public static function listFromHtml(string $html): array
     {
-        $affordances = [];
-        foreach (HtmlTagScanner::scan($html, ['a', 'area', 'link', 'form']) as ['tag' => $tag, 'attrs' => $attrs]) {
+        /** @var list<array{string, string, string, string}> $found */
+        $found = [];
+        /** @var array<int, array<string, string>> $hidden */
+        $hidden = [];
+        $form = null;
+        foreach (HtmlTagScanner::scan($html, ['a', 'area', 'link', 'form', '/form', 'input']) as ['tag' => $tag, 'attrs' => $attrs]) {
+            if ($tag === 'input') {
+                $name = $attrs['name'] ?? '';
+                if ($form !== null && $name !== '' && strtolower($attrs['type'] ?? '') === 'hidden') {
+                    $hidden[$form][$name] = $attrs['value'] ?? '';
+                }
+
+                continue;
+            }
+
+            if ($tag === 'form' || $tag === '/form') {
+                $form = null;
+            }
+
             $href = $tag === 'form' ? $attrs['action'] ?? null : $attrs['href'] ?? null;
             if ($href === null || $href === '') {
                 continue;
@@ -40,12 +60,17 @@ final readonly class HtmlAffordance
                 $method = 'get';
             }
 
-            $affordances[] = new self(
-                $href,
-                $method,
-                $attrs['rel'] ?? '',
-                $attrs['class'] ?? '',
-            );
+            $found[] = [$href, $method, $attrs['rel'] ?? '', $attrs['class'] ?? ''];
+            if ($tag !== 'form') {
+                continue;
+            }
+
+            $form = count($found) - 1;
+        }
+
+        $affordances = [];
+        foreach ($found as $i => [$href, $method, $rel, $class]) {
+            $affordances[] = new self($href, $method, $rel, $class, $hidden[$i] ?? []);
         }
 
         return $affordances;

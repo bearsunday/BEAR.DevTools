@@ -339,7 +339,8 @@ final class HttpResource implements ResourceInterface
     /**
      * Requests the rel's href with the method the representation gives it
      *
-     * The link query is overlaid on the query of the href, as bear/resource overlays it on the expanded href.
+     * A form's hidden inputs go with it, as a browser sends them. The link query is overlaid on them and on the query of
+     * the href, as bear/resource overlays it on the expanded href.
      */
     private function follow(LinkType $link, ResourceObject $current): ResourceObject
     {
@@ -353,8 +354,9 @@ final class HttpResource implements ResourceInterface
         }
 
         $href = ($this->queryMerger)($found->href, []);
+        $query = array_merge($this->hrefExtractor->hidden($link->key, $current), $href->query, $link->query);
 
-        return $this->send(strtoupper($found->method), $href->path, array_merge($href->query, $link->query));
+        return $this->send(strtoupper($found->method), $href->path, $query);
     }
 
     /**

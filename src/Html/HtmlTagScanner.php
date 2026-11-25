@@ -8,7 +8,9 @@ use function html_entity_decode;
 use function implode;
 use function preg_match_all;
 use function preg_quote;
+use function str_starts_with;
 use function strtolower;
+use function substr;
 
 use const ENT_HTML5;
 use const ENT_QUOTES;
@@ -40,19 +42,26 @@ final class HtmlTagScanner
     private const ATTR = '/(?P<name>' . self::ATTR_NAME . ')(?:\s*+=\s*+(?:"(?P<dq>[^"]*+)"|\'(?P<sq>[^\']*+)\'|(?P<uq>[^\s>]*+)))?/';
 
     /**
-     * @param non-empty-list<string> $tags Tag names to return
+     * @param non-empty-list<string> $tags Tag names to return; `/name` returns the end tag, with no attributes
      *
      * @return list<array{tag: string, attrs: array<string, string>}>
      */
     public static function scan(string $html, array $tags): array
     {
-        $names = [];
+        $starts = $ends = [];
         foreach ($tags as $tag) {
-            $names[] = preg_quote($tag, '/');
+            if (str_starts_with($tag, '/')) {
+                $ends[] = preg_quote(substr($tag, 1), '/');
+
+                continue;
+            }
+
+            $starts[] = preg_quote($tag, '/');
         }
 
         $pattern = '/' . self::COMMENT
-            . '|<(?P<tag>' . implode('|', $names) . ')(?=[\s\/>])(?P<attrs>' . self::ATTRS . ')>'
+            . '|<(?P<tag>' . implode('|', $starts) . ')(?=[\s\/>])(?P<attrs>' . self::ATTRS . ')>'
+            . '|<\/(?P<end>' . implode('|', $ends) . ')\s*>'
             . '|<[a-z][^\s\/>]*+' . self::ATTRS . '>/is';
 
         if (preg_match_all($pattern, $html, $matches, PREG_SET_ORDER) === false) {
@@ -61,6 +70,12 @@ final class HtmlTagScanner
 
         $found = [];
         foreach ($matches as $match) {
+            if (isset($match['end']) && $match['end'] !== '') {
+                $found[] = ['tag' => '/' . strtolower($match['end']), 'attrs' => []];
+
+                continue;
+            }
+
             if (! isset($match['tag']) || $match['tag'] === '') {
                 continue; // a comment or a tag that was not asked for
             }

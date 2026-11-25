@@ -167,7 +167,9 @@ public function testCreateAndUpdate(): void
 
 `HttpResource` finds a rel and its method in the HAL `_links`, then in the HTML, then in the `Link` header (its `method`
 parameter). In the HTML, an `<a>`, `<area>` or `<link>` is a GET and a `<form>` uses its `method`: the affordances
-`HtmlLinkAuditor` checks against the `#[Link]` declarations. A crawl link is not followed over HTTP.
+`HtmlLinkAuditor` checks against the `#[Link]` declarations. A form is sent with its hidden inputs, as a browser sends
+them, so a CSRF token the page carries goes with it; the link query is overlaid on them. A crawl link is not followed
+over HTTP.
 
 ## Requirements
 
