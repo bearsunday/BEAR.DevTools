@@ -355,12 +355,10 @@ final class HttpResource implements ResourceInterface
         }
 
         $href = ($this->queryMerger)($found->href, []);
-        $hidden = $this->hrefExtractor->hidden($link->key, $current);
-        if (isset($hidden[HtmlAffordance::METHOD_OVERRIDE])) {
-            throw new LinkException(sprintf('The %s form of %s carries %s; an HTML form submits GET or POST', $link->key, (string) $current->uri, HtmlAffordance::METHOD_OVERRIDE), 500);
+        $query = array_merge($this->hrefExtractor->hidden($link->key, $current), $href->query, $link->query);
+        if (isset($query[HtmlAffordance::METHOD_OVERRIDE])) {
+            throw new LinkException(sprintf('The %s link of %s carries %s, which would turn the request into another method', $link->key, (string) $current->uri, HtmlAffordance::METHOD_OVERRIDE), 500);
         }
-
-        $query = array_merge($hidden, $href->query, $link->query);
 
         return $this->send(strtoupper($found->method), $href->path, $query);
     }

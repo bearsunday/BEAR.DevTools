@@ -71,7 +71,7 @@ final readonly class HtmlLinkAuditor
                 continue;
             }
 
-            if (isset($affordance->hidden[HtmlAffordance::METHOD_OVERRIDE])) {
+            if ($affordance->overridesMethod()) {
                 $this->logger->warning($link, 'method-override');
             }
 

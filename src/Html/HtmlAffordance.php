@@ -7,13 +7,17 @@ namespace BEAR\Dev\Html;
 use function count;
 use function in_array;
 use function is_array;
+use function parse_str;
+use function parse_url;
 use function preg_split;
 use function strtolower;
 use function trim;
 
+use const PHP_URL_QUERY;
+
 final readonly class HtmlAffordance
 {
-    /** The hidden input that would turn a POST form into another method; an HTML form submits GET or POST only */
+    /** The field that would turn a POST form into another method; an HTML form submits GET or POST only */
     public const METHOD_OVERRIDE = '_method';
 
     /** @param array<string, string> $hidden The hidden inputs of a form, which a browser sends with it */
@@ -79,6 +83,14 @@ final readonly class HtmlAffordance
     public function hasToken(string $token): bool
     {
         return $this->containsToken($this->rel, $token) || $this->containsToken($this->class, $token);
+    }
+
+    /** Whether the form carries the method override, as a hidden input or in the query of its action */
+    public function overridesMethod(): bool
+    {
+        parse_str((string) parse_url($this->href, PHP_URL_QUERY), $query);
+
+        return isset($this->hidden[self::METHOD_OVERRIDE]) || isset($query[self::METHOD_OVERRIDE]);
     }
 
     private function containsToken(string $value, string $token): bool

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Resource\Exception\LinkException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 use function dirname;
@@ -27,10 +28,20 @@ final class HtmlLinkFollowTest extends TestCase
         $this->assertStringContainsString('class="doCreate"', (string) $form->view);
     }
 
-    public function testAFormThatOverridesItsMethodIsNotSubmitted(): void
+    /** @return array<string, array{string}> */
+    public static function methodOverrideProvider(): array
+    {
+        return [
+            'a hidden input' => ['doUpdate'],
+            'the query of the action' => ['doDelete'],
+        ];
+    }
+
+    #[DataProvider('methodOverrideProvider')]
+    public function testAFormThatOverridesItsMethodIsNotSubmitted(string $rel): void
     {
         $this->expectException(LinkException::class);
 
-        $this->resource->get('/form#link=self:doUpdate');
+        $this->resource->get("/form#link=self:{$rel}");
     }
 }

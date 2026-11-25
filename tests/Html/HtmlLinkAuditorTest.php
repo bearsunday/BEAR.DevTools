@@ -215,12 +215,19 @@ final class HtmlLinkAuditorTest extends TestCase
         $this->assertSame(['doUpdate:method-mismatch'], $this->logger->warnings);
     }
 
-    public function testMethodOverrideIsReported(): void
+    /** @return array<string, array{string, string}> */
+    public static function methodOverrideProvider(): array
     {
-        $this->auditor->audit(
-            [new LinkHeader('doUpdate', '/item', 'put')],
-            '<form action="/item" method="post" class="doUpdate"><input type="hidden" name="_method" value="put"></form>',
-        );
+        return [
+            'a hidden input' => ['/item', '<form action="/item" method="post" class="doUpdate"><input type="hidden" name="_method" value="put"></form>'],
+            'the query of the action' => ['/item?_method=put', '<form action="/item?_method=put" method="post" class="doUpdate"></form>'],
+        ];
+    }
+
+    #[DataProvider('methodOverrideProvider')]
+    public function testMethodOverrideIsReported(string $href, string $html): void
+    {
+        $this->auditor->audit([new LinkHeader('doUpdate', $href, 'put')], $html);
 
         $this->assertSame(['doUpdate:method-override'], $this->logger->warnings);
     }
