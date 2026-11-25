@@ -20,6 +20,7 @@ use LogicException;
 use Override;
 
 use function array_merge;
+use function bin2hex;
 use function curl_error;
 use function curl_exec;
 use function curl_init;
@@ -33,19 +34,25 @@ use function http_build_query;
 use function implode;
 use function in_array;
 use function is_array;
+use function is_file;
 use function is_string;
 use function json_encode;
 use function preg_match;
 use function preg_replace;
+use function random_bytes;
 use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
 use function strlen;
 use function strtolower;
 use function strtoupper;
+use function sys_get_temp_dir;
 use function trim;
+use function unlink;
 
 use const CURLOPT_CONNECTTIMEOUT;
+use const CURLOPT_COOKIEFILE;
+use const CURLOPT_COOKIEJAR;
 use const CURLOPT_CUSTOMREQUEST;
 use const CURLOPT_HEADER;
 use const CURLOPT_HTTPHEADER;
@@ -74,6 +81,13 @@ final class HttpResource implements ResourceInterface
     private readonly CreateResponse $createResponse;
     private readonly HrefExtractor $hrefExtractor;
 
+    /**
+     * The cookies the server sets, sent back on every later request of this instance as a browser does
+     *
+     * @var non-empty-string
+     */
+    private readonly string $cookieJar;
+
     public function __construct(string $host, string $index, string $logPath = 'php://stderr')
     {
         $this->baseUri = sprintf('http://%s', $host);
@@ -83,6 +97,16 @@ final class HttpResource implements ResourceInterface
         $this->queryMerger = new QueryMerger();
         $this->createResponse = new CreateResponse();
         $this->hrefExtractor = new HrefExtractor();
+        $this->cookieJar = sys_get_temp_dir() . '/bear-dev-http-cookie-' . bin2hex(random_bytes(8));
+    }
+
+    public function __destruct()
+    {
+        if (! is_file($this->cookieJar)) {
+            return;
+        }
+
+        unlink($this->cookieJar);
     }
 
     private function startServer(string $host, string $index): void
@@ -239,7 +263,7 @@ final class HttpResource implements ResourceInterface
         $uri = ($this->queryMerger)($path, $query);
         $queryParameter = $uri->query ? '?' . http_build_query($uri->query) : '';
         $url = sprintf('%s%s%s', $this->baseUri, $uri->path, $queryParameter);
-        $curlCommand = sprintf('curl -s -i %s', self::shellArg($url));
+        $curlCommand = sprintf('curl -s -i %s %s', $this->cookieArgs(), self::shellArg($url));
 
         return $this->request($url, 'get', $curlCommand);
     }
@@ -252,7 +276,8 @@ final class HttpResource implements ResourceInterface
         $url = sprintf('%s%s', $this->baseUri, $uri->path);
 
         $curlCommand = sprintf(
-            'curl -s -i -H %s -X %s -d %s %s',
+            'curl -s -i %s -H %s -X %s -d %s %s',
+            $this->cookieArgs(),
             escapeshellarg('Content-Type:application/json'),
             escapeshellarg($method),
             self::shellArg($json),
@@ -260,6 +285,13 @@ final class HttpResource implements ResourceInterface
         );
 
         return $this->request($url, $method, $curlCommand, $json);
+    }
+
+    private function cookieArgs(): string
+    {
+        $jar = escapeshellarg($this->cookieJar);
+
+        return "-b {$jar} -c {$jar}";
     }
 
     /**
@@ -472,6 +504,8 @@ final class HttpResource implements ResourceInterface
         curl_setopt($ch, CURLOPT_HEADER, true);
         // Only the connection is time-limited: a slow response (or a server paused in a debugger) is waited for.
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::CONNECT_TIMEOUT);
+        curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookieJar);
+        curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookieJar);
 
         $upperMethod = strtoupper($method);
         if ($upperMethod !== 'GET' && $upperMethod !== '') {

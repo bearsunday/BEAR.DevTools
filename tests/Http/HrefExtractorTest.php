@@ -97,6 +97,15 @@ final class HrefExtractorTest extends TestCase
         $this->assertSame(['/item', 'post'], [$link?->href, $link?->method]);
     }
 
+    public function testHtmlFormIsReadBeforeLinkHeader(): void
+    {
+        $ro = $this->ro('<form class="doCreate" method="post" action="/item"><input name="name"></form>');
+        $ro->headers = ['Link' => '</header>; rel="doCreate"'];
+        $link = (new HrefExtractor())->link('doCreate', $ro);
+
+        $this->assertSame(['/item', 'post'], [$link?->href, $link?->method]);
+    }
+
     private function ro(string $view): NullResourceObject
     {
         $ro = new NullResourceObject();

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Http;
 
-use BEAR\Dev\Html\HtmlTagScanner;
+use BEAR\Dev\Html\HtmlAffordance;
 use BEAR\Dev\Html\LinkHeader;
 use BEAR\Resource\ResourceObject;
 use stdClass;
@@ -70,14 +70,9 @@ final class HrefExtractor
             return null;
         }
 
-        foreach (HtmlTagScanner::scan($view, ['a', 'area', 'link']) as ['attrs' => $attrs]) {
-            if (! $this->hasLinkToken($attrs, $rel)) {
-                continue;
-            }
-
-            $href = $attrs['href'] ?? null;
-            if ($href !== null && $href !== '') {
-                return new LinkHeader($rel, $href);
+        foreach (HtmlAffordance::listFromHtml($view) as $affordance) {
+            if ($affordance->hasToken($rel)) {
+                return new LinkHeader($rel, $affordance->href, $affordance->method);
             }
         }
 
@@ -111,13 +106,6 @@ final class HrefExtractor
         }
 
         return null;
-    }
-
-    /** @param array<string, string> $attrs */
-    private function hasLinkToken(array $attrs, string $rel): bool
-    {
-        return $this->containsToken($attrs['rel'] ?? '', $rel)
-            || $this->containsToken($attrs['class'] ?? '', $rel);
     }
 
     private function linkHeaderParam(string $attrs, string $name): string|null

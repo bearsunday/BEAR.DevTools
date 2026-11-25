@@ -49,6 +49,7 @@ class DevModule extends AbstractModule
 - HTTP request logging (to STDERR, a single file, or per-test files)
 - Full HTTP method support (GET, POST, PUT, PATCH, DELETE)
 - HAL link following with `href()`
+- Cookies kept across the requests of one `HttpResource`, as a browser keeps them
 - Request/response capture for testing workflows
 
 ```php
@@ -164,9 +165,9 @@ public function testCreateAndUpdate(): void
 }
 ```
 
-`HttpResource` finds a rel and its method in the HAL `_links`, then in an HTML `<a>`, `<area>` or `<link>` (GET),
-then in the `Link` header (its `method` parameter). For an HTML page, `LinkHeaderModule` writes every declared
-`#[Link]`, unsafe ones included, into the `Link` header. A crawl link is not followed over HTTP.
+`HttpResource` finds a rel and its method in the HAL `_links`, then in the HTML, then in the `Link` header (its `method`
+parameter). In the HTML, an `<a>`, `<area>` or `<link>` is a GET and a `<form>` uses its `method`: the affordances
+`HtmlLinkAuditor` checks against the `#[Link]` declarations. A crawl link is not followed over HTTP.
 
 ## Requirements
 

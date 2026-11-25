@@ -25,7 +25,7 @@ final readonly class HtmlLinkAuditor
             return;
         }
 
-        $affordances = $this->affordances($html);
+        $affordances = HtmlAffordance::listFromHtml($html);
         foreach ($links as $link) {
             $this->auditLink($link, $affordances);
         }
@@ -72,32 +72,5 @@ final readonly class HtmlLinkAuditor
         }
 
         $this->logger->warning($link, 'semantic-token-missing');
-    }
-
-    /** @return list<HtmlAffordance> */
-    private function affordances(string $html): array
-    {
-        $affordances = [];
-        foreach (HtmlTagScanner::scan($html, ['a', 'area', 'link', 'form']) as ['tag' => $tag, 'attrs' => $attrs]) {
-            $href = $tag === 'form' ? $attrs['action'] ?? null : $attrs['href'] ?? null;
-            if ($href === null || $href === '') {
-                continue;
-            }
-
-            // A form's missing or empty method attribute means GET.
-            $method = $tag === 'form' ? strtolower($attrs['method'] ?? '') : '';
-            if ($method === '') {
-                $method = 'get';
-            }
-
-            $affordances[] = new HtmlAffordance(
-                $href,
-                $method,
-                $attrs['rel'] ?? '',
-                $attrs['class'] ?? '',
-            );
-        }
-
-        return $affordances;
     }
 }

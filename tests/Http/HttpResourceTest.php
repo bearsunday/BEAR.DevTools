@@ -67,6 +67,12 @@ class HttpResourceTest extends TestCase
         $this->assertStringContainsString('"method": "onDelete"', $ro->view);
     }
 
+    public function testCookieIsSentBack(): void
+    {
+        $this->assertFalse($this->resource->get('/visit')->body['visited']);
+        $this->assertTrue($this->resource->get('/visit')->body['visited']);
+    }
+
     public function testHrefFollowsHalLinkFirst(): void
     {
         $ro = new NullResourceObject();

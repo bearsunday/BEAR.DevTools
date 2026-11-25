@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `HttpResource` follows the links of a `#link=` fragment, which HTTP does not send, with the method the representation gives each rel, and the `Location` of a 303 or a 201 as bear/resource does; a workflow test written with `#link=` runs unchanged over HTTP.
-- `HrefExtractor::link()` returns a rel's href and method from HAL `_links`, HTML or the `Link` header.
+- `HrefExtractor::link()` returns a rel's href and method from HAL `_links`, an HTML `<a>`, `<area>`, `<link>` or `<form>`, or the `Link` header.
+- `HttpResource` keeps the cookies the server sets and sends them back on the later requests of the same instance.
+- `HtmlAffordance::listFromHtml()` reads the links and forms of an HTML page as `HtmlLinkAuditor` does.
+
+### Changed
+- `HrefExtractor::href()` also finds a rel on an HTML `<form>` and returns its action.
 
 ## [1.5.0] - 2026-11-11
 
