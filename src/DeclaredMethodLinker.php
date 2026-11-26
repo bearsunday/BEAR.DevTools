@@ -26,37 +26,36 @@ use Ray\Di\ProviderInterface;
 final class DeclaredMethodLinker implements LinkerInterface
 {
     private DeclaredLinks $links;
-    private LocationFollower $located;
 
     /** @param ProviderInterface<LinkCrawlerInterface> $linkCrawlerProvider */
     public function __construct(
         private readonly InvokerInterface $invoker,
         FactoryInterface $factory,
         #[Set(LinkCrawlerInterface::class)]
-        ProviderInterface $linkCrawlerProvider,
+        private readonly ProviderInterface $linkCrawlerProvider,
     ) {
-        $this->links = new DeclaredLinks($invoker, $factory, $linkCrawlerProvider);
-        $this->located = new LocationFollower($invoker, $factory);
+        $this->links = new DeclaredLinks($invoker, $factory);
     }
 
     #[Override]
     public function invoke(AbstractRequest $request): ResourceObject
     {
+        $linkCrawler = $this->linkCrawlerProvider->get();
         $this->invoker->invoke($request);
-        [$current, $method] = ($this->located)(clone $request->resourceObject, $request->method);
+        [$current, $method] = $this->links->located(clone $request->resourceObject, $request->method);
         if ($current->code >= Code::BAD_REQUEST) {
             return $current;
         }
 
         foreach ($request->links as $link) {
             if ($link->type === LinkType::CRAWL_LINK) {
-                $current = $this->links->crawl($link, $current, $method);
+                $current = $this->links->crawl($link, $current, $method, $linkCrawler);
 
                 continue;
             }
 
             $linkedRequest = $this->links->request($link, $current, $method);
-            [$linked, $linkedMethod] = ($this->located)($this->invoker->invoke($linkedRequest), $linkedRequest->method);
+            [$linked, $linkedMethod] = $this->links->located($this->invoker->invoke($linkedRequest), $linkedRequest->method);
             if ($link->type === LinkType::SELF_LINK) {
                 $current = $linked;
                 if ($current->code >= Code::BAD_REQUEST) {

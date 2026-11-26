@@ -6,6 +6,7 @@ namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Html\HtmlAffordance;
 use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
+use BEAR\Dev\LocationFollower;
 use BEAR\Dev\QueryMerger;
 use BEAR\Resource\Code;
 use BEAR\Resource\Exception\LinkException;
@@ -18,9 +19,7 @@ use LogicException;
 use function array_merge;
 use function explode;
 use function is_array;
-use function preg_match;
 use function sprintf;
-use function strtolower;
 use function strtoupper;
 
 /**
@@ -32,13 +31,13 @@ use function strtoupper;
  */
 final class LinkFollower
 {
-    /** A Location a link follows: a path on this server */
-    private const LOCATION_PATH = '#\A/(?!/)#';
+    private readonly LocationFollower $locationFollower;
 
     public function __construct(
         private readonly HrefExtractor $hrefExtractor,
         private readonly QueryMerger $queryMerger,
     ) {
+        $this->locationFollower = new LocationFollower();
     }
 
     /**
@@ -127,46 +126,12 @@ final class LinkFollower
     }
 
     /**
-     * The resource that answers a response
-     *
-     * A 303, or a 201 with a Location, is answered by the resource its Location names, requested once with GET.
+     * The resource that answers a response: itself, or the one its Location names
      *
      * @param Closure(string, string, array<string, mixed>): ResourceObject $send
      */
     private function located(ResourceObject $response, Closure $send): ResourceObject
     {
-        if (! $this->redirects($response)) {
-            return $response;
-        }
-
-        $location = $this->location($response);
-        if ($location === null || preg_match(self::LOCATION_PATH, $location) !== 1) {
-            throw new LinkException(sprintf('%s answered %d with the Location %s; a link follows only a path', (string) $response->uri, $response->code, $location ?? '(none)'), 500);
-        }
-
-        $located = $send('GET', $location, []);
-        if ($this->redirects($located)) {
-            throw new LinkException(sprintf('%s, the Location of %s, redirects again; a link follows one Location', (string) $located->uri, (string) $response->uri), 500);
-        }
-
-        return $located;
-    }
-
-    /** A 303, or a 201 that names the created resource in a Location */
-    private function redirects(ResourceObject $ro): bool
-    {
-        return $ro->code === Code::SEE_OTHER || ($ro->code === Code::CREATED && $this->location($ro) !== null);
-    }
-
-    /** The Location header of a response, whatever the case of its name */
-    private function location(ResourceObject $ro): string|null
-    {
-        foreach ($ro->headers as $name => $value) {
-            if (strtolower($name) === 'location') {
-                return $value;
-            }
-        }
-
-        return null;
+        return ($this->locationFollower)($response, static fn (string $path): ResourceObject => $send('GET', $path, []));
     }
 }

@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 use function array_diff;
+use function array_filter;
 use function array_values;
 use function assert;
 use function clearstatcache;
@@ -407,11 +408,11 @@ class HttpResourceTest extends TestCase
         $before = (array) glob($pattern);
         $resource = new HttpResource('127.0.0.1:8080', dirname(__DIR__) . '/Fake/app/public/index.php', __DIR__ . '/log');
         $resource->get('/visit');
-        $jars = array_values(array_diff((array) glob($pattern), $before));
-
-        // Another process may make jars at the same time, so every new one is checked
-        $this->assertNotSame([], $jars);
         clearstatcache();
+        // Another process may make or remove jars at the same time, so every new one still there is checked
+        $jars = array_values(array_filter(array_diff((array) glob($pattern), $before), 'is_file'));
+
+        $this->assertNotSame([], $jars);
         foreach ($jars as $jar) {
             $this->assertSame(0600, fileperms((string) $jar) & 0777);
         }

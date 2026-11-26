@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace BEAR\Dev;
 
+use BEAR\Dev\LinkerApp\Resource\App\Drink\Mocha;
 use BEAR\Dev\LinkerApp\Resource\App\Form;
 use BEAR\Dev\LinkerApp\Resource\App\Item;
 use BEAR\Dev\LinkerApp\Resource\App\Payment;
 use BEAR\Resource\Code;
 use BEAR\Resource\Exception\LinkException;
+use BEAR\Resource\Exception\LinkQueryException;
 use BEAR\Resource\Exception\LinkRelException;
 use BEAR\Resource\LinkerInterface;
 use BEAR\Resource\Module\ResourceModule;
@@ -17,6 +19,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Ray\Di\AbstractModule;
 use Ray\Di\Injector;
+
+use function assert;
+use function json_encode;
 
 final class DeclaredMethodLinkerTest extends TestCase
 {
@@ -133,5 +138,60 @@ final class DeclaredMethodLinkerTest extends TestCase
         $this->expectException(LinkException::class);
 
         $this->resource->get($uri);
+    }
+
+    public function testAClientErrorOfTheRequestEndsItBeforeItsFirstLink(): void
+    {
+        $ro = $this->resource->delete('app://self/item#link=self:form');
+
+        $this->assertInstanceOf(Item::class, $ro);
+        $this->assertSame(Code::BAD_REQUEST, $ro->code);
+    }
+
+    public function testALinkQueryFillsAPathVariableOfTheHref(): void
+    {
+        $this->assertInstanceOf(Mocha::class, $this->resource->post('app://self/order?drink=latte#link=self:drink?drink=mocha'));
+    }
+
+    public function testALinkDeclaredWithAMethodAResourceDoesNotTakeThrows(): void
+    {
+        $this->expectException(LinkException::class);
+        $this->expectExceptionMessage("rel:purge class:BEAR\\Dev\\LinkerApp\\Resource\\App\\Form declares the method 'purge'");
+
+        $this->resource->get('app://self/form#link=self:purge');
+    }
+
+    /** @return array<string, array{string}> */
+    public static function crawlProvider(): array
+    {
+        return [
+            'a body' => ['app://self/author?id=1#link=crawl:tree'],
+            'a list' => ['app://self/authors#link=crawl:tree'],
+        ];
+    }
+
+    #[DataProvider('crawlProvider')]
+    public function testACrawlLinkIsFollowedAsTheResourceClientFollowsIt(string $uri): void
+    {
+        $body = $this->resource->get($uri)->body;
+
+        $this->assertStringContainsString('"posts":', (string) json_encode($body));
+        $this->assertSame($this->resourceClient()->get($uri)->body, $body);
+    }
+
+    public function testACrawlLinkFromABodyThatIsNotAnArrayThrows(): void
+    {
+        $this->expectException(LinkQueryException::class);
+
+        $this->resource->get('app://self/scalar#link=crawl:tree');
+    }
+
+    /** The resource client with its own linker, which follows every link with GET */
+    private function resourceClient(): ResourceInterface
+    {
+        $resource = (new Injector(new ResourceModule('BEAR\Dev\LinkerApp'), __DIR__ . '/tmp'))->getInstance(ResourceInterface::class);
+        assert($resource instanceof ResourceInterface);
+
+        return $resource;
     }
 }

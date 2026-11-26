@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev;
 
 use BEAR\Resource\Annotation\Link;
+use BEAR\Resource\Exception\LinkException;
 use BEAR\Resource\Exception\LinkQueryException;
 use BEAR\Resource\Exception\LinkRelException;
 use BEAR\Resource\FactoryInterface;
@@ -14,8 +15,6 @@ use BEAR\Resource\LinkType;
 use BEAR\Resource\Method;
 use BEAR\Resource\Request;
 use BEAR\Resource\ResourceObject;
-use Ray\Di\Di\Set;
-use Ray\Di\ProviderInterface;
 use ReflectionMethod;
 
 use function array_map;
@@ -34,13 +33,31 @@ use function uri_template;
  */
 final class DeclaredLinks
 {
-    /** @param ProviderInterface<LinkCrawlerInterface> $linkCrawlerProvider */
+    private readonly LocationFollower $location;
+
     public function __construct(
         private readonly InvokerInterface $invoker,
         private readonly FactoryInterface $factory,
-        #[Set(LinkCrawlerInterface::class)]
-        private readonly ProviderInterface $linkCrawlerProvider,
     ) {
+        $this->location = new LocationFollower();
+    }
+
+    /**
+     * The resource that answers a response, and the method it was requested with
+     *
+     * @return array{ResourceObject, Method}
+     *
+     * @throws LinkException
+     */
+    public function located(ResourceObject $response, Method $method): array
+    {
+        $located = ($this->location)($response, function (string $path) use ($response): ResourceObject {
+            $ro = $this->factory->newInstance("{$response->uri->scheme}://{$response->uri->host}{$path}");
+
+            return $this->invoker->invoke(new Request($this->invoker, $ro, Method::GET, $ro->uri->query));
+        });
+
+        return $located === $response ? [$response, $method] : [$located, Method::GET];
     }
 
     /**
@@ -49,6 +66,7 @@ final class DeclaredLinks
      * The method the link declares requests its href expanded with the body overlaid by the link query; the link query
      * is overlaid on the expanded query.
      *
+     * @throws LinkException
      * @throws LinkQueryException
      * @throws LinkRelException
      */
@@ -62,7 +80,11 @@ final class DeclaredLinks
 
             $body = (array) $current->body;
             $ro = $this->factory->newInstance(uri_template($annotation->href, array_merge($body, $link->query)));
-            $method = Method::from(strtolower($annotation->method));
+            $method = Method::tryFrom(strtolower($annotation->method));
+            if ($method === null) {
+                throw new LinkException(sprintf("rel:%s class:%s declares the method '%s', which a resource does not take", $link->key, $current::class, $annotation->method), 500);
+            }
+
             $ro->uri->method = $method->value;
             $ro->uri->query = array_merge($ro->uri->query, $link->query);
 
@@ -75,13 +97,13 @@ final class DeclaredLinks
     }
 
     /** Follows a crawl link with GET, as the resource client does */
-    public function crawl(LinkType $link, ResourceObject $current, Method $from): ResourceObject
+    public function crawl(LinkType $link, ResourceObject $current, Method $from, LinkCrawlerInterface $linkCrawler): ResourceObject
     {
-        $linkCrawler = $this->linkCrawlerProvider->get();
+        $annotations = $this->annotations($current, $from);
         $isList = $linkCrawler->isList($current->body);
         /** @var list<array<string, mixed>> $bodyList */
         $bodyList = $isList ? (array) $current->body : [$current->body];
-        $linkCrawler->crawl($this->annotations($current, $from), $link, $bodyList);
+        $linkCrawler->crawl($annotations, $link, $bodyList);
         $current->body = $isList ? $bodyList : $bodyList[0];
 
         return $current;

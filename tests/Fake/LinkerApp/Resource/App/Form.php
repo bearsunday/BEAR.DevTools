@@ -18,6 +18,7 @@ class Form extends ResourceObject
     #[Link(rel: 'lowerCaseLocation', href: 'app://self/redirect', method: 'patch')]
     #[Link(rel: 'networkPath', href: 'app://self/network-path', method: 'post')]
     #[Link(rel: 'fail', href: 'app://self/item', method: 'delete')]
+    #[Link(rel: 'purge', href: 'app://self/item', method: 'purge')]
     public function onGet(): static
     {
         $this->body = ['id' => 7];

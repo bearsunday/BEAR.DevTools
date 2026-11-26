@@ -83,7 +83,10 @@ src/
 │   ├── MultipartForm.php    # multipart/form-data fields of a query that carries a file (internal)
 │   ├── AbstractWorkflowTest.php
 │   └── Exception/           # HalLinkNotFoundException, HttpRequestException
+├── DeclaredLinks.php        # The links a #[Link] declares and the requests they make (internal)
+├── DeclaredMethodLinker.php # Linker a test binds: follows each link with its declared method
 ├── DevInvoker.php  # Development-specific resource invoker
+├── LocationFollower.php     # Follows the Location of a 303 or 201, in process and over HTTP (internal)
 ├── QueryMerger.php # Query parameter handling
 ├── Types.php       # Psalm type aliases
 └── Uri.php         # URI utilities

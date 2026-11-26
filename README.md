@@ -195,10 +195,12 @@ declarations. A form needs an `action`. HTML has no PUT or DELETE, so a `#[Link]
 POST that carries `_method`, as a hidden input or in the query of the action, throws `LinkException`, and
 `HtmlLinkAuditor` reports such a form as `method-override`.
 
-A form is sent with the hidden inputs a browser submits (not the disabled ones), so a CSRF token the page carries goes
-with it, and the link query is overlaid on them; the values are sent as JSON. A link query fills the query of the href
-the representation gives, not a variable already expanded into its path. Cookies are kept across the requests of one
-`HttpResource`. A crawl link is not followed over HTTP.
+A form is sent with the hidden inputs inside it that have no `disabled` attribute, so a CSRF token the page carries goes
+with it, and the link query is overlaid on them; the values are sent as JSON. An input that names its form with a `form`
+attribute from outside, and a `<fieldset disabled>`, are not read. A link query fills the query of the href the
+representation gives, not a variable already expanded into its path. Only the path and query of a URI or an href go to
+the server, so `page://self/item` and `//other.example/item` both request `/item`. Cookies are kept across the requests
+of one `HttpResource`. A crawl link is not followed over HTTP.
 
 ## Requirements
 
