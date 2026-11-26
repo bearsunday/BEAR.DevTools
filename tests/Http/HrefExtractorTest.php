@@ -106,6 +106,16 @@ final class HrefExtractorTest extends TestCase
         $this->assertSame(['/item', 'post'], [$link?->href, $link?->method]);
     }
 
+    public function testHrefSkipsTheFormThatLinkReads(): void
+    {
+        $ro = $this->ro('<form rel="doCheckout" method="post" action="/shopping/checkout?mode=complete"></form>');
+        $ro->headers = ['Link' => '</shopping/checkout>; rel="doCheckout"; method="post"'];
+        $extractor = new HrefExtractor();
+
+        $this->assertSame('/shopping/checkout', $extractor->href('doCheckout', $ro));
+        $this->assertSame('/shopping/checkout?mode=complete', $extractor->link('doCheckout', $ro)?->href);
+    }
+
     public function testHiddenInputsAreThoseOfTheFormTheLinkIsReadFrom(): void
     {
         $ro = $this->ro(
