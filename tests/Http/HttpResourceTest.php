@@ -12,10 +12,8 @@ use Koriym\FileUpload\ErrorFileUpload;
 use Koriym\FileUpload\FileUpload;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 
-use function array_diff;
-use function array_filter;
-use function array_values;
 use function assert;
 use function clearstatcache;
 use function dirname;
@@ -23,9 +21,8 @@ use function explode;
 use function file_exists;
 use function file_get_contents;
 use function fileperms;
-use function glob;
+use function is_string;
 use function str_repeat;
-use function sys_get_temp_dir;
 use function unlink;
 
 use const PHP_OS_FAMILY;
@@ -404,17 +401,12 @@ class HttpResourceTest extends TestCase
             $this->markTestSkipped('Windows has no POSIX file modes.');
         }
 
-        $pattern = sys_get_temp_dir() . '/bear-dev-http-cookie-*';
-        $before = (array) glob($pattern);
         $resource = new HttpResource('127.0.0.1:8080', dirname(__DIR__) . '/Fake/app/public/index.php', __DIR__ . '/log');
         $resource->get('/visit');
+        $jar = (new ReflectionProperty(HttpResource::class, 'cookieJar'))->getValue($resource);
+        assert(is_string($jar));
         clearstatcache();
-        // Another process may make or remove jars at the same time, so every new one still there is checked
-        $jars = array_values(array_filter(array_diff((array) glob($pattern), $before), 'is_file'));
 
-        $this->assertNotSame([], $jars);
-        foreach ($jars as $jar) {
-            $this->assertSame(0600, fileperms((string) $jar) & 0777);
-        }
+        $this->assertSame(0600, fileperms($jar) & 0777);
     }
 }
