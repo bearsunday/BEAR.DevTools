@@ -10,15 +10,24 @@ use BEAR\Resource\NullResourceObject;
 use BEAR\Resource\Uri;
 use Koriym\FileUpload\ErrorFileUpload;
 use Koriym\FileUpload\FileUpload;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+use function array_diff;
+use function array_values;
 use function assert;
+use function clearstatcache;
 use function dirname;
+use function explode;
 use function file_exists;
 use function file_get_contents;
+use function fileperms;
+use function glob;
 use function str_repeat;
+use function sys_get_temp_dir;
 use function unlink;
 
+use const PHP_OS_FAMILY;
 use const UPLOAD_ERR_NO_FILE;
 
 class HttpResourceTest extends TestCase
@@ -290,5 +299,90 @@ class HttpResourceTest extends TestCase
         $this->expectExceptionMessage('The upload "file" failed and has no file to send: No file was uploaded');
 
         $resource->post('/', ['file' => $failed]);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function notServerPathProvider(): array
+    {
+        return [
+            'a path without a leading slash' => ['0@localhost/echo'],
+            'a path that starts with two slashes' => ['http://127.0.0.1:18483//localhost/echo'],
+        ];
+    }
+
+    #[DataProvider('notServerPathProvider')]
+    public function testAPathNotOnTheServerIsNotRequested(string $uri): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log', ['Authorization' => 'Bearer s3cret']);
+
+        $this->expectException(HttpRequestException::class);
+        $this->expectExceptionMessage('is not a path on http://127.0.0.1:18483');
+
+        $resource->get($uri);
+    }
+
+    public function testSecretHeaderValuesAreHiddenInTheLog(): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log', [
+            'Authorization' => 'Bearer s3cret',
+            'cookie' => 'sid=c00kie',
+            'X-Api-Key' => 'k3y',
+            'X-Story' => 'told',
+        ]);
+
+        $this->assertSame('Bearer s3cret', $resource->get('/')->body['authorization']);
+        [$curlCommand] = explode("\n", (string) file_get_contents(__DIR__ . '/log/test-secret-header-values-are-hidden-in-the-log.log'), 2);
+        $this->assertSame("curl -s -i -H 'Authorization: ***' -H 'cookie: ***' -H 'X-Api-Key: ***' -H 'X-Story: told' 'http://127.0.0.1:18483/'", $curlCommand);
+    }
+
+    public function testMultipartValuesAreLoggedAsFormStrings(): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log');
+        $ro = $resource->post('/', [
+            'note' => '@/etc/hosts',
+            'file' => FileUpload::fromFile(dirname(__DIR__) . '/Fake/upload.txt'),
+        ]);
+
+        $this->assertStringContainsString('"post":{"note":"@\/etc\/hosts"}', (string) $ro->view);
+        $log = (string) file_get_contents(__DIR__ . '/log/test-multipart-values-are-logged-as-form-strings.log');
+        $this->assertStringContainsString(" -F 'file=@", $log);
+        $this->assertStringContainsString(" --form-string 'note=@/etc/hosts' ", $log);
+    }
+
+    public function testFilesInAListAreSentAsMultipartForm(): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log');
+        $upload = FileUpload::fromFile(dirname(__DIR__) . '/Fake/upload.txt');
+        $ro = $resource->post('/', ['title' => 'story', 'images' => [$upload, $upload]]);
+
+        $this->assertStringContainsString('"post":{"title":"story"}', (string) $ro->view);
+        $this->assertStringContainsString('"files":{"images":{"name":["upload.txt","upload.txt"],"type":["text\/plain","text\/plain"],"size":[5,5]}}', (string) $ro->view);
+    }
+
+    public function testGetWithFileThrows(): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log');
+
+        $this->expectException(HttpRequestException::class);
+        $this->expectExceptionMessage('GET / carries a file');
+
+        $resource->get('/', ['images' => [FileUpload::fromFile(dirname(__DIR__) . '/Fake/upload.txt')]]);
+    }
+
+    public function testCookieJarIsReadableOnlyByTheOwner(): void
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            $this->markTestSkipped('Windows has no POSIX file modes.');
+        }
+
+        $pattern = sys_get_temp_dir() . '/bear-dev-http-cookie-*';
+        $before = (array) glob($pattern);
+        $resource = new HttpResource('127.0.0.1:8080', dirname(__DIR__) . '/Fake/app/public/index.php', __DIR__ . '/log');
+        $resource->get('/visit');
+        $jars = array_values(array_diff((array) glob($pattern), $before));
+
+        $this->assertCount(1, $jars);
+        clearstatcache();
+        $this->assertSame(0600, fileperms((string) $jars[0]) & 0777);
     }
 }

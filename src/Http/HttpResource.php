@@ -18,6 +18,7 @@ use Override;
 use function array_keys;
 use function array_map;
 use function bin2hex;
+use function chmod;
 use function curl_error;
 use function curl_exec;
 use function curl_init;
@@ -34,6 +35,7 @@ use function is_array;
 use function is_file;
 use function is_string;
 use function json_encode;
+use function preg_match;
 use function preg_replace;
 use function random_bytes;
 use function sprintf;
@@ -43,6 +45,7 @@ use function strlen;
 use function strtolower;
 use function strtoupper;
 use function sys_get_temp_dir;
+use function touch;
 use function trim;
 use function unlink;
 
@@ -66,6 +69,13 @@ final class HttpResource implements ResourceInterface
     private const CONNECT_TIMEOUT = 10;
     private const LOGGED_ARG_MAX = 8000;
 
+    /** A path on this server; anything else would be appended to the host and could name another one */
+    private const SERVER_PATH = '#\A/(?!/)#';
+
+    /** The headers whose values the logged curl command hides, in lower case */
+    private const SECRET_HEADERS = ['authorization', 'proxy-authorization', 'cookie', 'x-api-key'];
+    private const HIDDEN_VALUE = '***';
+
     private string $logPath;
     private string $baseUri;
 
@@ -80,7 +90,7 @@ final class HttpResource implements ResourceInterface
     /** @var list<string> The headers sent with every request, as `name: value` */
     private readonly array $headerLines;
 
-    /** The `-H` arguments of those headers in the logged curl command */
+    /** The `-H` arguments of those headers in the logged curl command, with the secret values hidden */
     private readonly string $headerArgs;
 
     /**
@@ -103,8 +113,15 @@ final class HttpResource implements ResourceInterface
         $this->linkFollower = new LinkFollower($this->hrefExtractor, $this->queryMerger);
         $this->multipartForm = new MultipartForm();
         $this->headerLines = array_map(static fn (string $name, string $value): string => $name . ': ' . $value, array_keys($headers), $headers);
-        $this->headerArgs = implode('', array_map(static fn (string $line): string => ' -H ' . escapeshellarg($line), $this->headerLines));
+        $this->headerArgs = implode('', array_map(
+            static fn (string $name, string $value): string => ' -H ' . escapeshellarg($name . ': ' . (in_array(strtolower($name), self::SECRET_HEADERS, true) ? self::HIDDEN_VALUE : $value)),
+            array_keys($headers),
+            $headers,
+        ));
         $this->cookieJar = sys_get_temp_dir() . '/bear-dev-http-cookie-' . bin2hex(random_bytes(8));
+        // The jar holds the session cookies; cURL keeps the mode of the file it writes them back to.
+        touch($this->cookieJar);
+        chmod($this->cookieJar, 0600);
     }
 
     public function __destruct()
@@ -255,11 +272,23 @@ final class HttpResource implements ResourceInterface
         throw new LogicException();
     }
 
-    /** @param array<string, mixed> $query */
+    /**
+     * @param array<string, mixed> $query
+     *
+     * @throws HttpRequestException For a path not on this server, or a GET whose query carries a file.
+     */
     private function send(string $method, string $path, array $query): ResourceObject
     {
         $uri = ($this->queryMerger)($path, $query);
+        if (preg_match(self::SERVER_PATH, $uri->path) !== 1) {
+            throw new HttpRequestException(sprintf('%s is not a path on %s', $path, $this->baseUri));
+        }
+
         if ($method === 'GET') {
+            if ($this->multipartForm->fields($uri->query) !== null) {
+                throw new HttpRequestException(sprintf('GET %s carries a file, which only a request with a body sends', $path));
+            }
+
             $queryParameter = $uri->query ? '?' . http_build_query($uri->query) : '';
             $url = sprintf('%s%s%s', $this->baseUri, $uri->path, $queryParameter);
 

@@ -13,6 +13,7 @@ use Koriym\FileUpload\ErrorFileUpload;
 use function escapeshellarg;
 use function explode;
 use function http_build_query;
+use function is_array;
 use function sprintf;
 use function urldecode;
 
@@ -27,7 +28,8 @@ final class MultipartForm
     /**
      * The fields cURL posts, or null when the query carries no file
      *
-     * Values other than files are named as a form names them, `ids[0]` for a list.
+     * Each field is named as a form names it, `images[0]` for a file in a list, so PHP reads the files into `$_FILES`
+     * and the other values into `$_POST` with the structure of the query.
      *
      * @param array<string, mixed> $query
      *
@@ -37,27 +39,12 @@ final class MultipartForm
      */
     public function fields(array $query): array|null
     {
-        $fields = [];
-        $values = [];
-        foreach ($query as $name => $value) {
-            if ($value instanceof ErrorFileUpload) {
-                throw new HttpRequestException(sprintf('The upload "%s" failed and has no file to send: %s', $name, (string) $value->message));
-            }
-
-            if ($value instanceof AbstractFileUpload) {
-                $fields[$name] = new CURLFile($value->tmpName, $value->type, $value->name);
-
-                continue;
-            }
-
-            $values[$name] = $value;
-        }
-
+        $fields = $this->files($query, '');
         if ($fields === []) {
             return null;
         }
 
-        $encoded = http_build_query($values);
+        $encoded = http_build_query($this->withoutFiles($query));
         foreach ($encoded === '' ? [] : explode('&', $encoded) as $pair) {
             [$name, $value] = explode('=', $pair, 2) + [1 => ''];
             $fields[urldecode($name)] = urldecode($value);
@@ -67,7 +54,9 @@ final class MultipartForm
     }
 
     /**
-     * The `-F` arguments of the curl command that posts the fields
+     * The curl arguments that post the fields
+     *
+     * A value is sent with `--form-string`, since `-F` would read a file named by a value that starts with `@` or `<`.
      *
      * @param MultipartFields $fields
      */
@@ -75,12 +64,60 @@ final class MultipartForm
     {
         $args = '';
         foreach ($fields as $name => $value) {
-            $field = $value instanceof CURLFile
-                ? sprintf('%s=@%s;type=%s;filename=%s', $name, $value->getFilename(), $value->getMimeType(), $value->getPostFilename())
-                : $name . '=' . $value;
-            $args .= ' -F ' . escapeshellarg($field);
+            $args .= $value instanceof CURLFile
+                ? ' -F ' . escapeshellarg(sprintf('%s=@%s;type=%s;filename=%s', $name, $value->getFilename(), $value->getMimeType(), $value->getPostFilename()))
+                : ' --form-string ' . escapeshellarg($name . '=' . $value);
         }
 
         return $args;
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     *
+     * @return array<string, CURLFile>
+     */
+    private function files(array $values, string $prefix): array
+    {
+        $files = [];
+        foreach ($values as $key => $value) {
+            $name = $prefix === '' ? (string) $key : sprintf('%s[%s]', $prefix, $key);
+            if ($value instanceof ErrorFileUpload) {
+                throw new HttpRequestException(sprintf('The upload "%s" failed and has no file to send: %s', $name, (string) $value->message));
+            }
+
+            if ($value instanceof AbstractFileUpload) {
+                $files[$name] = new CURLFile($value->tmpName, $value->type, $value->name);
+
+                continue;
+            }
+
+            if (! is_array($value)) {
+                continue;
+            }
+
+            $files += $this->files($value, $name);
+        }
+
+        return $files;
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     *
+     * @return array<array-key, mixed>
+     */
+    private function withoutFiles(array $values): array
+    {
+        $rest = [];
+        foreach ($values as $key => $value) {
+            if ($value instanceof AbstractFileUpload) {
+                continue;
+            }
+
+            $rest[$key] = is_array($value) ? $this->withoutFiles($value) : $value;
+        }
+
+        return $rest;
     }
 }
