@@ -19,7 +19,7 @@ final class LinkFollowerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->follower = new LinkFollower(new HrefExtractor(), new QueryMerger());
+        $this->follower = new LinkFollower(new QueryMerger());
     }
 
     public function testAClientErrorEndsTheChainWithThatResponse(): void

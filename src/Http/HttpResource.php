@@ -24,7 +24,6 @@ use function curl_exec;
 use function curl_init;
 use function curl_setopt;
 use function debug_backtrace;
-use function escapeshellarg;
 use function explode;
 use function file_exists;
 use function file_put_contents;
@@ -41,7 +40,6 @@ use function random_bytes;
 use function sprintf;
 use function str_ends_with;
 use function str_starts_with;
-use function strlen;
 use function strtolower;
 use function strtoupper;
 use function sys_get_temp_dir;
@@ -67,14 +65,9 @@ use const PHP_EOL;
 final class HttpResource implements ResourceInterface
 {
     private const CONNECT_TIMEOUT = 10;
-    private const LOGGED_ARG_MAX = 8000;
 
     /** A path on this server; anything else would be appended to the host and could name another one */
     private const SERVER_PATH = '#\A/(?!/)#';
-
-    /** A header name that names a credential, whose value the logged curl command hides */
-    private const SECRET_HEADER = '/auth|token|key|secret|cookie|session|passw/i';
-    private const HIDDEN_VALUE = '***';
 
     private string $logPath;
     private string $baseUri;
@@ -83,15 +76,12 @@ final class HttpResource implements ResourceInterface
     private static array $servers = [];
     private readonly QueryMerger $queryMerger;
     private readonly CreateResponse $createResponse;
-    private readonly HrefExtractor $hrefExtractor;
     private readonly LinkFollower $linkFollower;
     private readonly MultipartForm $multipartForm;
+    private readonly CurlCommand $curlCommand;
 
     /** @var list<string> The headers sent with every request, as `name: value` */
     private readonly array $headerLines;
-
-    /** The `-H` arguments of those headers in the logged curl command, with the secret values hidden */
-    private readonly string $headerArgs;
 
     /**
      * The cookies the server sets, sent back on every later request of this instance as a browser does
@@ -109,15 +99,10 @@ final class HttpResource implements ResourceInterface
         $this->startServer($host, $index);
         $this->queryMerger = new QueryMerger();
         $this->createResponse = new CreateResponse();
-        $this->hrefExtractor = new HrefExtractor();
-        $this->linkFollower = new LinkFollower($this->hrefExtractor, $this->queryMerger);
+        $this->linkFollower = new LinkFollower($this->queryMerger);
         $this->multipartForm = new MultipartForm();
+        $this->curlCommand = new CurlCommand($headers, $this->multipartForm);
         $this->headerLines = array_map(static fn (string $name, string $value): string => $name . ': ' . $value, array_keys($headers), $headers);
-        $this->headerArgs = implode('', array_map(
-            static fn (string $name, string $value): string => ' -H ' . escapeshellarg($name . ': ' . (preg_match(self::SECRET_HEADER, $name) === 1 ? self::HIDDEN_VALUE : $value)),
-            array_keys($headers),
-            $headers,
-        ));
         $this->cookieJar = sys_get_temp_dir() . '/bear-dev-http-cookie-' . bin2hex(random_bytes(8));
         // The jar holds the session cookies; cURL keeps the mode of the file it writes them back to.
         touch($this->cookieJar);
@@ -293,45 +278,18 @@ final class HttpResource implements ResourceInterface
             $queryParameter = $uri->query ? '?' . http_build_query($uri->query) : '';
             $url = sprintf('%s%s%s', $this->baseUri, $uri->path, $queryParameter);
 
-            return $this->request($url, 'get', sprintf('curl -s -i%s %s', $this->headerArgs, self::shellArg($url)));
+            return $this->request($url, 'get', $this->curlCommand->get($url));
         }
 
         $url = sprintf('%s%s', $this->baseUri, $uri->path);
         $fields = $this->multipartForm->fields($uri->query);
         if ($fields !== null) {
-            $formArgs = implode('', array_map(static fn (array $arg): string => ' ' . $arg[0] . ' ' . self::shellArg($arg[1]), $this->multipartForm->curlArgs($fields)));
-            $curlCommand = sprintf('curl -s -i%s -X %s%s %s', $this->headerArgs, escapeshellarg($method), $formArgs, self::shellArg($url));
-
-            return $this->request($url, $method, $curlCommand, $fields);
+            return $this->request($url, $method, $this->curlCommand->multipart($method, $url, $fields), $fields);
         }
 
         $json = json_encode($uri->query, JSON_THROW_ON_ERROR);
-        $curlCommand = sprintf(
-            'curl -s -i%s -H %s -X %s -d %s %s',
-            $this->headerArgs,
-            escapeshellarg('Content-Type:application/json'),
-            escapeshellarg($method),
-            self::shellArg($json),
-            self::shellArg($url),
-        );
 
-        return $this->request($url, $method, $curlCommand, $json);
-    }
-
-    /**
-     * Quote an argument for the logged curl command.
-     *
-     * escapeshellarg() refuses arguments longer than the platform command line limit (about 8 KB on Windows,
-     * ARG_MAX elsewhere, e.g. 1 MiB on macOS): a fatal error, or a ValueError on PHP 8.4+. Such an argument
-     * cannot be pasted into a shell anyway, so the logged command shows its size instead.
-     */
-    private static function shellArg(string $arg): string
-    {
-        if (strlen($arg) > self::LOGGED_ARG_MAX) {
-            return escapeshellarg(sprintf('<%d bytes omitted>', strlen($arg)));
-        }
-
-        return escapeshellarg($arg);
+        return $this->request($url, $method, $this->curlCommand->json($method, $url, $json), $json);
     }
 
     /** @param array<string> $output */

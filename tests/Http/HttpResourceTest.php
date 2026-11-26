@@ -14,15 +14,19 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
+use function array_map;
 use function assert;
 use function clearstatcache;
 use function dirname;
+use function escapeshellarg;
 use function explode;
 use function file_exists;
 use function file_get_contents;
 use function fileperms;
+use function implode;
 use function is_string;
 use function str_repeat;
+use function substr;
 use function unlink;
 
 use const PHP_OS_FAMILY;
@@ -333,8 +337,10 @@ class HttpResourceTest extends TestCase
 
         $this->assertSame('Bearer s3cret', $resource->get('/')->body['authorization']);
         [$curlCommand] = explode("\n", (string) file_get_contents(__DIR__ . '/log/test-secret-header-values-are-hidden-in-the-log.log'), 2);
+        // escapeshellarg() quotes with ' on POSIX and with " on Windows
+        $headers = ['Authorization: ***', 'cookie: ***', 'Api-Key: ***', 'x-auth-token: ***', 'X-CSRF-Token: ***', 'X-Session-Id: ***', 'X-Story: told'];
         $this->assertSame(
-            "curl -s -i -H 'Authorization: ***' -H 'cookie: ***' -H 'Api-Key: ***' -H 'x-auth-token: ***' -H 'X-CSRF-Token: ***' -H 'X-Session-Id: ***' -H 'X-Story: told' 'http://127.0.0.1:18483/'",
+            'curl -s -i' . implode('', array_map(static fn (string $header): string => ' -H ' . escapeshellarg($header), $headers)) . ' ' . escapeshellarg('http://127.0.0.1:18483/'),
             $curlCommand,
         );
     }
@@ -349,8 +355,8 @@ class HttpResourceTest extends TestCase
 
         $this->assertStringContainsString('"post":{"note":"@\/etc\/hosts"}', (string) $ro->view);
         $log = (string) file_get_contents(__DIR__ . '/log/test-multipart-values-are-logged-as-form-strings.log');
-        $this->assertStringContainsString(" -F 'file=@", $log);
-        $this->assertStringContainsString(" --form-string 'note=@/etc/hosts' ", $log);
+        $this->assertStringContainsString(' -F ' . substr(escapeshellarg('file=@'), 0, -1), $log);
+        $this->assertStringContainsString(' --form-string ' . escapeshellarg('note=@/etc/hosts') . ' ', $log);
     }
 
     public function testALongMultipartValueIsOmittedFromTheLog(): void
@@ -361,7 +367,7 @@ class HttpResourceTest extends TestCase
 
         $this->assertStringContainsString($note, (string) $ro->view);
         $log = (string) file_get_contents(__DIR__ . '/log/test-a-long-multipart-value-is-omitted-from-the-log.log');
-        $this->assertStringContainsString(" --form-string '<9005 bytes omitted>' ", $log);
+        $this->assertStringContainsString(' --form-string ' . escapeshellarg('<9005 bytes omitted>') . ' ', $log);
     }
 
     public function testFilesInAListAreSentAsMultipartForm(): void

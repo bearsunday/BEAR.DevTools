@@ -78,6 +78,7 @@ src/
 ├── Http/           # HTTP testing utilities
 │   ├── HttpResource.php
 │   ├── CreateResponse.php
+│   ├── CurlCommand.php      # The curl command a request is logged as, secret header values hidden (internal)
 │   ├── HrefExtractor.php    # Resolves a link rel from HAL, semantic HTML or a Link header
 │   ├── LinkFollower.php     # Follows the links of a `#link=` fragment over HTTP (internal)
 │   ├── MultipartForm.php    # multipart/form-data fields of a query that carries a file (internal)

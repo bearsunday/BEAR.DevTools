@@ -31,12 +31,13 @@ use function strtoupper;
  */
 final class LinkFollower
 {
+    private readonly HrefExtractor $hrefExtractor;
     private readonly LocationFollower $locationFollower;
 
     public function __construct(
-        private readonly HrefExtractor $hrefExtractor,
         private readonly QueryMerger $queryMerger,
     ) {
+        $this->hrefExtractor = new HrefExtractor();
         $this->locationFollower = new LocationFollower();
     }
 
