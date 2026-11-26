@@ -12,7 +12,7 @@
         "php": "^8.2",
         "ext-curl": "*",
         "bear/app-meta": "^1.8",
-        "bear/resource": "^1.31",
+        "bear/resource": "^1.37",
         "koriym/php-server": "^1.0",
         "ray/aop": "^2.18.0",
         "ray/di": "^2.18.0"

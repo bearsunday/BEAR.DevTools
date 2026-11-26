@@ -36,7 +36,7 @@ final readonly class HtmlLinkAuditor
     {
         $targetMatches = [];
         foreach ($affordances as $affordance) {
-            if ($affordance->href !== $link->href) {
+            if ($affordance->target() !== $link->href) {
                 continue;
             }
 
@@ -66,6 +66,12 @@ final readonly class HtmlLinkAuditor
             return;
         }
 
+        $this->auditToken($link, $methodMatches);
+    }
+
+    /** @param non-empty-list<HtmlAffordance> $methodMatches */
+    private function auditToken(LinkHeader $link, array $methodMatches): void
+    {
         foreach ($methodMatches as $affordance) {
             if (! $affordance->hasToken($link->rel)) {
                 continue;

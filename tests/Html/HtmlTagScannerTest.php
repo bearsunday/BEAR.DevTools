@@ -71,4 +71,16 @@ final class HtmlTagScannerTest extends TestCase
 
         $this->assertSame(['form', 'input', '/form', 'input'], array_column($tags, 'tag'));
     }
+
+    public function testOnlyEndTagsCanBeAskedFor(): void
+    {
+        $this->assertSame([['tag' => '/form', 'attrs' => []]], HtmlTagScanner::scan('<form action="/x"></form>', ['/form']));
+    }
+
+    public function testEndTagWithAttributesIsAnEndTag(): void
+    {
+        $tags = HtmlTagScanner::scan('<form action="/x"></form x><input name="b">', ['form', '/form', 'input']);
+
+        $this->assertSame(['form', '/form', 'input'], array_column($tags, 'tag'));
+    }
 }

@@ -111,6 +111,7 @@ final class HrefExtractorTest extends TestCase
         $ro = $this->ro(
             '<form class="doCreate" method="post" action="/item">'
             . '<input type="hidden" name="csrfToken" value="t1"><input type="text" name="title" value="typed">'
+            . '<input type="hidden" name="off" value="x" disabled>'
             . '</form><input type="hidden" name="outside" value="x">',
         );
 

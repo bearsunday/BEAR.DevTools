@@ -168,11 +168,14 @@ public function testCreateAndUpdate(): void
 `HttpResource` finds a rel and its method in the HAL `_links`, then in the HTML, then in the `Link` header (its `method`
 parameter). In the HTML, an `<a>`, `<area>` or `<link>` is a GET, and a `<form>` is a POST when its `method` is `post`
 and a GET otherwise, as a browser submits it: the affordances `HtmlLinkAuditor` checks against the `#[Link]`
-declarations. HTML has no PUT or DELETE, so a `#[Link]` that is not a GET is a POST form; a request that carries
-`_method`, as a hidden input or in the query of the action, throws `LinkException`, and `HtmlLinkAuditor` reports such a
-form as `method-override`. A form is sent with its hidden inputs, as
-a browser sends them, so a CSRF token the page carries goes with it; the link query is overlaid on them. A crawl link is
-not followed over HTTP.
+declarations. A form needs an `action`. HTML has no PUT or DELETE, so a `#[Link]` that is not a GET is a POST form; a
+POST that carries `_method`, as a hidden input or in the query of the action, throws `LinkException`, and
+`HtmlLinkAuditor` reports such a form as `method-override`.
+
+A form is sent with the hidden inputs a browser submits (not the disabled ones), so a CSRF token the page carries goes
+with it, and the link query is overlaid on them; the values are sent as JSON. A link query fills the query of the href
+the representation gives, not a variable already expanded into its path. Cookies are kept across the requests of one
+`HttpResource`. A crawl link is not followed over HTTP.
 
 ## Requirements
 

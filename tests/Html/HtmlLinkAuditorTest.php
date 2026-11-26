@@ -215,20 +215,29 @@ final class HtmlLinkAuditorTest extends TestCase
         $this->assertSame(['doUpdate:method-mismatch'], $this->logger->warnings);
     }
 
-    /** @return array<string, array{string, string}> */
+    /** @return array<string, array{string}> */
     public static function methodOverrideProvider(): array
     {
         return [
-            'a hidden input' => ['/item', '<form action="/item" method="post" class="doUpdate"><input type="hidden" name="_method" value="put"></form>'],
-            'the query of the action' => ['/item?_method=put', '<form action="/item?_method=put" method="post" class="doUpdate"></form>'],
+            'a hidden input' => ['<form action="/item" method="post" class="doUpdate"><input type="hidden" name="_method" value="put"></form>'],
+            'the query of the action' => ['<form action="/item?_method=put" method="post" class="doUpdate"></form>'],
         ];
     }
 
+    /** The declared href has no _method: the form still names its target */
     #[DataProvider('methodOverrideProvider')]
-    public function testMethodOverrideIsReported(string $href, string $html): void
+    public function testMethodOverrideIsReported(string $html): void
     {
-        $this->auditor->audit([new LinkHeader('doUpdate', $href, 'put')], $html);
+        $this->auditor->audit([new LinkHeader('doUpdate', '/item', 'put')], $html);
 
         $this->assertSame(['doUpdate:method-override'], $this->logger->warnings);
+    }
+
+    /** _method changes only a POST, so a link that carries it is not an override */
+    public function testMethodOverrideOnAGetLinkIsNotReported(): void
+    {
+        $this->auditor->audit([new LinkHeader('goItem', '/item')], '<a href="/item?_method=put" class="goItem">Item</a>');
+
+        $this->assertSame([], $this->logger->warnings);
     }
 }

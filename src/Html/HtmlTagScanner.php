@@ -18,7 +18,7 @@ use const PREG_SET_ORDER;
 use const PREG_UNMATCHED_AS_NULL;
 
 /**
- * Finds start tags in rendered HTML, skipping HTML comments, and tokenizes their attributes.
+ * Finds start tags in rendered HTML, and end tags when asked for, skipping HTML comments, and tokenizes attributes.
  *
  * Comments and tags are matched in a single left-to-right pass, so a `<!--`
  * inside a quoted attribute value (e.g. `<div title="<!--">`) is consumed as
@@ -48,23 +48,7 @@ final class HtmlTagScanner
      */
     public static function scan(string $html, array $tags): array
     {
-        $starts = $ends = [];
-        foreach ($tags as $tag) {
-            if (str_starts_with($tag, '/')) {
-                $ends[] = preg_quote(substr($tag, 1), '/');
-
-                continue;
-            }
-
-            $starts[] = preg_quote($tag, '/');
-        }
-
-        $pattern = '/' . self::COMMENT
-            . '|<(?P<tag>' . implode('|', $starts) . ')(?=[\s\/>])(?P<attrs>' . self::ATTRS . ')>'
-            . '|<\/(?P<end>' . implode('|', $ends) . ')\s*>'
-            . '|<[a-z][^\s\/>]*+' . self::ATTRS . '>/is';
-
-        if (preg_match_all($pattern, $html, $matches, PREG_SET_ORDER) === false) {
+        if (preg_match_all(self::pattern($tags), $html, $matches, PREG_SET_ORDER) === false) {
             return []; // @codeCoverageIgnore
         }
 
@@ -84,6 +68,32 @@ final class HtmlTagScanner
         }
 
         return $found;
+    }
+
+    /**
+     * One pass that matches comments, the tags asked for and any other start tag, so that their insides are skipped
+     *
+     * @param non-empty-list<string> $tags
+     *
+     * @return non-empty-string
+     */
+    private static function pattern(array $tags): string
+    {
+        $starts = $ends = [];
+        foreach ($tags as $tag) {
+            if (str_starts_with($tag, '/')) {
+                $ends[] = preg_quote(substr($tag, 1), '/');
+
+                continue;
+            }
+
+            $starts[] = preg_quote($tag, '/');
+        }
+
+        $start = $starts === [] ? '' : '|<(?P<tag>' . implode('|', $starts) . ')(?=[\s\/>])(?P<attrs>' . self::ATTRS . ')>';
+        $end = $ends === [] ? '' : '|<\/(?P<end>' . implode('|', $ends) . ')(?=[\s\/>])[^>]*+>';
+
+        return '/' . self::COMMENT . $start . $end . '|<[a-z][^\s\/>]*+' . self::ATTRS . '>/is';
     }
 
     /**
