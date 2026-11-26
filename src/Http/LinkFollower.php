@@ -26,7 +26,7 @@ use function strtoupper;
 /**
  * Follows the links of a `#link=` fragment, which HTTP does not carry to the server
  *
- * The links are followed as bear/resource follows them in process, from the rels the representation carries.
+ * The links are followed as DeclaredMethodLinker follows them in process, from the rels the representation carries.
  *
  * @internal
  */
@@ -105,7 +105,7 @@ final class LinkFollower
      * Requests the rel's href with the method the representation gives it
      *
      * A form's hidden inputs go with it, as a browser sends them. The link query is overlaid on them and on the query of
-     * the href by top-level name, as bear/resource overlays it on the expanded href: `user[name]` replaces all of `user`.
+     * the href by top-level name, as DeclaredMethodLinker overlays it on the expanded href: `user[name]` replaces all of `user`.
      *
      * @param Closure(string, string, array<string, mixed>): ResourceObject $send
      */

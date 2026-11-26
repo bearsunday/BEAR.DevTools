@@ -162,8 +162,19 @@ class WorkflowTest extends Workflow
 }
 ```
 
-A request URI can carry the links to follow in a `#link=` fragment, as bear/resource reads it. HTTP does not send
-a fragment, so `HttpResource` follows the links itself, and the same test runs in process and over HTTP:
+A request URI can carry the links to follow in a `#link=` fragment, as bear/resource reads it. The resource client
+follows every link with GET; a test that steps through a workflow follows each link with the method its `#[Link]`
+declares, and the `Location` of a 303 or a 201, by binding `DeclaredMethodLinker`:
+
+```php
+use BEAR\Dev\DeclaredMethodLinker;
+use BEAR\Resource\LinkerInterface;
+
+$this->bind(LinkerInterface::class)->to(DeclaredMethodLinker::class); // in the test context module
+```
+
+HTTP does not send a fragment, so `HttpResource` follows the links itself in the same way, and the same test runs in
+process and over HTTP:
 
 ```php
 public function testCreateAndUpdate(): void
@@ -174,6 +185,8 @@ public function testCreateAndUpdate(): void
     $this->assertSame(3, $this->bodyValue($item, 'id'));
 }
 ```
+
+`DeclaredMethodLinker` also follows the links of an `#[Embed]` src, so bind it only where a link that is not GET may run.
 
 `HttpResource` finds a rel and its method in the HAL `_links`, then in the HTML, then in the `Link` header (its `method`
 parameter). In the HTML, an `<a>`, `<area>` or `<link>` is a GET, and a `<form>` is a POST when its `method` is `post`

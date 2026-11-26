@@ -14,7 +14,7 @@ final class LinkStoryResourceTest extends AbstractApiLinkStoryTest
 {
     protected function newResource(): ResourceInterface
     {
-        $resource = Injector::getInstance('app')->getInstance(ResourceInterface::class);
+        $resource = Injector::getInstance('test-app')->getInstance(ResourceInterface::class);
         assert($resource instanceof ResourceInterface);
 
         return $resource;
