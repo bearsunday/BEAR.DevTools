@@ -326,14 +326,19 @@ class HttpResourceTest extends TestCase
         $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log', [
             'Authorization' => 'Bearer s3cret',
             'cookie' => 'sid=c00kie',
-            'X-Api-Key' => 'k3y',
+            'Api-Key' => 'k3y',
             'x-auth-token' => 't0ken',
+            'X-CSRF-Token' => 'csrf',
+            'X-Session-Id' => 's1',
             'X-Story' => 'told',
         ]);
 
         $this->assertSame('Bearer s3cret', $resource->get('/')->body['authorization']);
         [$curlCommand] = explode("\n", (string) file_get_contents(__DIR__ . '/log/test-secret-header-values-are-hidden-in-the-log.log'), 2);
-        $this->assertSame("curl -s -i -H 'Authorization: ***' -H 'cookie: ***' -H 'X-Api-Key: ***' -H 'x-auth-token: ***' -H 'X-Story: told' 'http://127.0.0.1:18483/'", $curlCommand);
+        $this->assertSame(
+            "curl -s -i -H 'Authorization: ***' -H 'cookie: ***' -H 'Api-Key: ***' -H 'x-auth-token: ***' -H 'X-CSRF-Token: ***' -H 'X-Session-Id: ***' -H 'X-Story: told' 'http://127.0.0.1:18483/'",
+            $curlCommand,
+        );
     }
 
     public function testMultipartValuesAreLoggedAsFormStrings(): void
@@ -363,12 +368,13 @@ class HttpResourceTest extends TestCase
 
     public function testFilesInAListAreSentAsMultipartForm(): void
     {
-        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log');
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log', ['Authorization' => 'Bearer s3cret']);
         $upload = FileUpload::fromFile(dirname(__DIR__) . '/Fake/upload.txt');
         $ro = $resource->post('/', ['title' => 'story', 'images' => [$upload, $upload]]);
 
         $this->assertStringContainsString('"post":{"title":"story"}', (string) $ro->view);
         $this->assertStringContainsString('"files":{"images":{"name":["upload.txt","upload.txt"],"type":["text\/plain","text\/plain"],"size":[5,5]}}', (string) $ro->view);
+        $this->assertStringContainsString('"authorization":"Bearer s3cret"', (string) $ro->view);
     }
 
     public function testGetWithFileThrows(): void
@@ -379,6 +385,16 @@ class HttpResourceTest extends TestCase
         $this->expectExceptionMessage('GET / carries a file');
 
         $resource->get('/', ['images' => [FileUpload::fromFile(dirname(__DIR__) . '/Fake/upload.txt')]]);
+    }
+
+    public function testAFileGoesWithAPostOnly(): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log');
+
+        $this->expectException(HttpRequestException::class);
+        $this->expectExceptionMessage('PUT / carries a file');
+
+        $resource->put('/', ['file' => FileUpload::fromFile(dirname(__DIR__) . '/Fake/upload.txt')]);
     }
 
     public function testCookieJarIsReadableOnlyByTheOwner(): void
@@ -393,8 +409,11 @@ class HttpResourceTest extends TestCase
         $resource->get('/visit');
         $jars = array_values(array_diff((array) glob($pattern), $before));
 
-        $this->assertCount(1, $jars);
+        // Another process may make jars at the same time, so every new one is checked
+        $this->assertNotSame([], $jars);
         clearstatcache();
-        $this->assertSame(0600, fileperms((string) $jars[0]) & 0777);
+        foreach ($jars as $jar) {
+            $this->assertSame(0600, fileperms((string) $jar) & 0777);
+        }
     }
 }

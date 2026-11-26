@@ -105,7 +105,7 @@ final class LinkFollower
      * Requests the rel's href with the method the representation gives it
      *
      * A form's hidden inputs go with it, as a browser sends them. The link query is overlaid on them and on the query of
-     * the href, as bear/resource overlays it on the expanded href.
+     * the href by top-level name, as bear/resource overlays it on the expanded href: `user[name]` replaces all of `user`.
      *
      * @param Closure(string, string, array<string, mixed>): ResourceObject $send
      */

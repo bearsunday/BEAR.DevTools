@@ -72,8 +72,8 @@ final class HttpResource implements ResourceInterface
     /** A path on this server; anything else would be appended to the host and could name another one */
     private const SERVER_PATH = '#\A/(?!/)#';
 
-    /** The headers whose values the logged curl command hides, in lower case */
-    private const SECRET_HEADERS = ['authorization', 'proxy-authorization', 'cookie', 'x-api-key', 'x-auth-token'];
+    /** A header name that names a credential, whose value the logged curl command hides */
+    private const SECRET_HEADER = '/auth|token|key|secret|cookie|session|passw/i';
     private const HIDDEN_VALUE = '***';
 
     private string $logPath;
@@ -114,7 +114,7 @@ final class HttpResource implements ResourceInterface
         $this->multipartForm = new MultipartForm();
         $this->headerLines = array_map(static fn (string $name, string $value): string => $name . ': ' . $value, array_keys($headers), $headers);
         $this->headerArgs = implode('', array_map(
-            static fn (string $name, string $value): string => ' -H ' . escapeshellarg($name . ': ' . (in_array(strtolower($name), self::SECRET_HEADERS, true) ? self::HIDDEN_VALUE : $value)),
+            static fn (string $name, string $value): string => ' -H ' . escapeshellarg($name . ': ' . (preg_match(self::SECRET_HEADER, $name) === 1 ? self::HIDDEN_VALUE : $value)),
             array_keys($headers),
             $headers,
         ));
@@ -275,20 +275,21 @@ final class HttpResource implements ResourceInterface
     /**
      * @param array<string, mixed> $query
      *
-     * @throws HttpRequestException For a path not on this server, or a GET whose query carries a file.
+     * @throws HttpRequestException For a path not on this server, or a request other than POST whose query carries a file.
      */
     private function send(string $method, string $path, array $query): ResourceObject
     {
         $uri = ($this->queryMerger)($path, $query);
         if (preg_match(self::SERVER_PATH, $uri->path) !== 1) {
-            throw new HttpRequestException(sprintf('%s is not a path on %s', $path, $this->baseUri));
+            throw new HttpRequestException(sprintf('"%s" is not a path on %s', $path, $this->baseUri));
+        }
+
+        // PHP reads a multipart body into $_FILES for a POST only
+        if ($method !== 'POST' && $this->multipartForm->fields($uri->query) !== null) {
+            throw new HttpRequestException(sprintf('%s %s carries a file, which only a POST sends', $method, $path));
         }
 
         if ($method === 'GET') {
-            if ($this->multipartForm->fields($uri->query) !== null) {
-                throw new HttpRequestException(sprintf('GET %s carries a file, which only a request with a body sends', $path));
-            }
-
             $queryParameter = $uri->query ? '?' . http_build_query($uri->query) : '';
             $url = sprintf('%s%s%s', $this->baseUri, $uri->path, $queryParameter);
 

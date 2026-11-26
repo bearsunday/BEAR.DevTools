@@ -56,6 +56,17 @@ final class LinkFollowerTest extends TestCase
         $this->assertSame(['POST', '/item', ['tags' => ['a', 'b'], 'user' => ['name' => 'koriym']]], $this->sent[1]);
     }
 
+    public function testTheLinkQueryReplacesAHiddenInputByItsTopLevelName(): void
+    {
+        $this->follow('GET', '/form#link=self:doTag?user%5Bname%5D=bear', [
+            $this->ro(200, [], '<form class="doTag" method="post" action="/item">'
+                . '<input type="hidden" name="user[name]" value="koriym"><input type="hidden" name="user[role]" value="admin"></form>'),
+            $this->ro(200),
+        ]);
+
+        $this->assertSame(['POST', '/item', ['user' => ['name' => 'bear']]], $this->sent[1]);
+    }
+
     public function testTheFirstResponseIsLocatedBeforeItsRelIsRead(): void
     {
         $created = $this->ro(201);
