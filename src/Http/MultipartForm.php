@@ -10,7 +10,6 @@ use CURLFile;
 use Koriym\FileUpload\AbstractFileUpload;
 use Koriym\FileUpload\ErrorFileUpload;
 
-use function escapeshellarg;
 use function explode;
 use function http_build_query;
 use function is_array;
@@ -54,19 +53,21 @@ final class MultipartForm
     }
 
     /**
-     * The curl arguments that post the fields
+     * The curl options that post the fields, each as an option and its value
      *
      * A value is sent with `--form-string`, since `-F` would read a file named by a value that starts with `@` or `<`.
      *
      * @param MultipartFields $fields
+     *
+     * @return list<array{string, string}>
      */
-    public function curlArgs(array $fields): string
+    public function curlArgs(array $fields): array
     {
-        $args = '';
+        $args = [];
         foreach ($fields as $name => $value) {
-            $args .= $value instanceof CURLFile
-                ? ' -F ' . escapeshellarg(sprintf('%s=@%s;type=%s;filename=%s', $name, $value->getFilename(), $value->getMimeType(), $value->getPostFilename()))
-                : ' --form-string ' . escapeshellarg($name . '=' . $value);
+            $args[] = $value instanceof CURLFile
+                ? ['-F', sprintf('%s=@%s;type=%s;filename=%s', $name, $value->getFilename(), $value->getMimeType(), $value->getPostFilename())]
+                : ['--form-string', $name . '=' . $value];
         }
 
         return $args;

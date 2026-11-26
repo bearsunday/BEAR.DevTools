@@ -349,6 +349,17 @@ class HttpResourceTest extends TestCase
         $this->assertStringContainsString(" --form-string 'note=@/etc/hosts' ", $log);
     }
 
+    public function testALongMultipartValueIsOmittedFromTheLog(): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log');
+        $note = str_repeat('a', 9000);
+        $ro = $resource->post('/', ['note' => $note, 'file' => FileUpload::fromFile(dirname(__DIR__) . '/Fake/upload.txt')]);
+
+        $this->assertStringContainsString($note, (string) $ro->view);
+        $log = (string) file_get_contents(__DIR__ . '/log/test-a-long-multipart-value-is-omitted-from-the-log.log');
+        $this->assertStringContainsString(" --form-string '<9005 bytes omitted>' ", $log);
+    }
+
     public function testFilesInAListAreSentAsMultipartForm(): void
     {
         $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log');

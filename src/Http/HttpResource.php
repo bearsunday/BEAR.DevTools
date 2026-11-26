@@ -73,7 +73,7 @@ final class HttpResource implements ResourceInterface
     private const SERVER_PATH = '#\A/(?!/)#';
 
     /** The headers whose values the logged curl command hides, in lower case */
-    private const SECRET_HEADERS = ['authorization', 'proxy-authorization', 'cookie', 'x-api-key'];
+    private const SECRET_HEADERS = ['authorization', 'proxy-authorization', 'cookie', 'x-api-key', 'x-auth-token'];
     private const HIDDEN_VALUE = '***';
 
     private string $logPath;
@@ -298,7 +298,8 @@ final class HttpResource implements ResourceInterface
         $url = sprintf('%s%s', $this->baseUri, $uri->path);
         $fields = $this->multipartForm->fields($uri->query);
         if ($fields !== null) {
-            $curlCommand = sprintf('curl -s -i%s -X %s%s %s', $this->headerArgs, escapeshellarg($method), $this->multipartForm->curlArgs($fields), self::shellArg($url));
+            $formArgs = implode('', array_map(static fn (array $arg): string => ' ' . $arg[0] . ' ' . self::shellArg($arg[1]), $this->multipartForm->curlArgs($fields)));
+            $curlCommand = sprintf('curl -s -i%s -X %s%s %s', $this->headerArgs, escapeshellarg($method), $formArgs, self::shellArg($url));
 
             return $this->request($url, $method, $curlCommand, $fields);
         }
