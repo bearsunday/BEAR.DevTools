@@ -327,12 +327,13 @@ class HttpResourceTest extends TestCase
             'Authorization' => 'Bearer s3cret',
             'cookie' => 'sid=c00kie',
             'X-Api-Key' => 'k3y',
+            'x-auth-token' => 't0ken',
             'X-Story' => 'told',
         ]);
 
         $this->assertSame('Bearer s3cret', $resource->get('/')->body['authorization']);
         [$curlCommand] = explode("\n", (string) file_get_contents(__DIR__ . '/log/test-secret-header-values-are-hidden-in-the-log.log'), 2);
-        $this->assertSame("curl -s -i -H 'Authorization: ***' -H 'cookie: ***' -H 'X-Api-Key: ***' -H 'X-Story: told' 'http://127.0.0.1:18483/'", $curlCommand);
+        $this->assertSame("curl -s -i -H 'Authorization: ***' -H 'cookie: ***' -H 'X-Api-Key: ***' -H 'x-auth-token: ***' -H 'X-Story: told' 'http://127.0.0.1:18483/'", $curlCommand);
     }
 
     public function testMultipartValuesAreLoggedAsFormStrings(): void
