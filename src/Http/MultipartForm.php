@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Http;
 
+use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Dev\Types;
 use CURLFile;
 use Koriym\FileUpload\AbstractFileUpload;
+use Koriym\FileUpload\ErrorFileUpload;
 
 use function escapeshellarg;
 use function explode;
@@ -30,12 +32,18 @@ final class MultipartForm
      * @param array<string, mixed> $query
      *
      * @return MultipartFields|null
+     *
+     * @throws HttpRequestException For an upload that failed, which has no file to send.
      */
     public function fields(array $query): array|null
     {
         $fields = [];
         $values = [];
         foreach ($query as $name => $value) {
+            if ($value instanceof ErrorFileUpload) {
+                throw new HttpRequestException(sprintf('The upload "%s" failed and has no file to send: %s', $name, (string) $value->message));
+            }
+
             if ($value instanceof AbstractFileUpload) {
                 $fields[$name] = new CURLFile($value->tmpName, $value->type, $value->name);
 

@@ -8,6 +8,7 @@ use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
 use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Resource\NullResourceObject;
 use BEAR\Resource\Uri;
+use Koriym\FileUpload\ErrorFileUpload;
 use Koriym\FileUpload\FileUpload;
 use PHPUnit\Framework\TestCase;
 
@@ -276,5 +277,16 @@ class HttpResourceTest extends TestCase
         $this->assertSame('POST', $ro->body['method']);
         $this->assertStringContainsString('"post":{"title":"story","tags":["a","b"]}', (string) $ro->view);
         $this->assertStringContainsString('"files":{"file":{"name":"upload.txt","type":"text\/plain","size":5}}', (string) $ro->view);
+    }
+
+    public function testFailedUploadIsNotSent(): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log');
+        $failed = new ErrorFileUpload(['name' => 'upload.txt', 'type' => '', 'size' => 0, 'tmp_name' => '', 'error' => UPLOAD_ERR_NO_FILE]);
+
+        $this->expectException(HttpRequestException::class);
+        $this->expectExceptionMessage('The upload "file" failed and has no file to send: No file was uploaded');
+
+        $resource->post('/', ['file' => $failed]);
     }
 }
