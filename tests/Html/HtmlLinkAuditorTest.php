@@ -193,4 +193,51 @@ final class HtmlLinkAuditorTest extends TestCase
 
         $this->assertSame([], $this->logger->warnings);
     }
+
+    public function testUnsafeLinkOtherThanPostIsAPostForm(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('doUpdate', '/item', 'put')],
+            '<form action="/item" method="post" class="doUpdate"></form>',
+        );
+
+        $this->assertSame([], $this->logger->warnings);
+    }
+
+    /** A browser submits a form whose method is neither GET nor POST with GET */
+    public function testFormMethodOtherThanPostIsGet(): void
+    {
+        $this->auditor->audit(
+            [new LinkHeader('doUpdate', '/item', 'put')],
+            '<form action="/item" method="put" class="doUpdate"></form>',
+        );
+
+        $this->assertSame(['doUpdate:method-mismatch'], $this->logger->warnings);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function methodOverrideProvider(): array
+    {
+        return [
+            'a hidden input' => ['<form action="/item" method="post" class="doUpdate"><input type="hidden" name="_method" value="put"></form>'],
+            'the query of the action' => ['<form action="/item?_method=put" method="post" class="doUpdate"></form>'],
+        ];
+    }
+
+    /** The declared href has no _method: the form still names its target */
+    #[DataProvider('methodOverrideProvider')]
+    public function testMethodOverrideIsReported(string $html): void
+    {
+        $this->auditor->audit([new LinkHeader('doUpdate', '/item', 'put')], $html);
+
+        $this->assertSame(['doUpdate:method-override'], $this->logger->warnings);
+    }
+
+    /** _method changes only a POST, so a link that carries it is not an override */
+    public function testMethodOverrideOnAGetLinkIsNotReported(): void
+    {
+        $this->auditor->audit([new LinkHeader('goItem', '/item')], '<a href="/item?_method=put" class="goItem">Item</a>');
+
+        $this->assertSame([], $this->logger->warnings);
+    }
 }

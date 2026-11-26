@@ -49,10 +49,12 @@ class DevModule extends AbstractModule
 - HTTP request logging (to STDERR, a single file, or per-test files)
 - Full HTTP method support (GET, POST, PUT, PATCH, DELETE)
 - HAL link following with `href()`
+- Cookies kept across the requests of one `HttpResource`, as a browser keeps them
 - Request/response capture for testing workflows
 
 ```php
 use BEAR\Dev\Http\HttpResource;
+use Koriym\FileUpload\FileUpload;
 
 // Start the built-in server and create an HTTP client.
 // The third argument is the log destination and is optional
@@ -68,6 +70,15 @@ assert($ro->code === 200);
 
 $ro = $resource->post('/users', ['name' => 'John', 'email' => 'john@example.com']);
 assert($ro->code === 201);
+
+// A query that carries a Koriym\FileUpload\FileUpload is sent as multipart/form-data
+$ro = $resource->post('/avatar', ['image' => FileUpload::fromFile(__DIR__ . '/avatar.png')]);
+```
+
+The fourth argument holds headers sent with every request:
+
+```php
+$resource = new HttpResource('127.0.0.1:8080', '/path/to/public/index.php', __DIR__ . '/log', ['Sec-Fetch-Site' => 'same-origin']);
 ```
 
 #### Following HAL links
@@ -150,6 +161,46 @@ class WorkflowTest extends Workflow
     }
 }
 ```
+
+A request URI can carry the links to follow in a `#link=` fragment, as bear/resource reads it. The resource client
+follows every link with GET; a test that steps through a workflow follows each link with the method its `#[Link]`
+declares, and the `Location` of a 303 or a 201, by binding `DeclaredMethodLinker`:
+
+```php
+use BEAR\Dev\DeclaredMethodLinker;
+use BEAR\Resource\LinkerInterface;
+
+$this->bind(LinkerInterface::class)->to(DeclaredMethodLinker::class); // in the test context module
+```
+
+HTTP does not send a fragment, so `HttpResource` follows the links itself in the same way, and the same test runs in
+process and over HTTP:
+
+```php
+public function testCreateAndUpdate(): void
+{
+    // POST doCreate and follow its 201 Location, follow goForm, PUT doUpdate and follow its 303 Location
+    $item = $this->resource->get('/form#link=self:doCreate?name=koriym,self:goForm,self:doUpdate?id=3');
+
+    $this->assertSame(3, $this->bodyValue($item, 'id'));
+}
+```
+
+`DeclaredMethodLinker` also follows the links of an `#[Embed]` src, so bind it only where a link that is not GET may run.
+
+`HttpResource` finds a rel and its method in the HAL `_links`, then in the HTML, then in the `Link` header (its `method`
+parameter). In the HTML, an `<a>`, `<area>` or `<link>` is a GET, and a `<form>` is a POST when its `method` is `post`
+and a GET otherwise, as a browser submits it: the affordances `HtmlLinkAuditor` checks against the `#[Link]`
+declarations. A form needs an `action`. HTML has no PUT or DELETE, so a `#[Link]` that is not a GET is a POST form; a
+POST that carries `_method`, as a hidden input or in the query of the action, throws `LinkException`, and
+`HtmlLinkAuditor` reports such a form as `method-override`.
+
+A form is sent with the hidden inputs inside it that have no `disabled` attribute, so a CSRF token the page carries goes
+with it, and the link query is overlaid on them; the values are sent as JSON. An input outside the form that names it
+with a `form` attribute is not sent, and a `disabled` on an enclosing `<fieldset>` is ignored, so its inputs are sent. A
+link query fills the query of the href the representation gives, not a variable already expanded into its path. Only
+the path and query of a URI or an href go to the server, so `page://self/item` and `//other.example/item` both request
+`/item`. Cookies are kept across the requests of one `HttpResource`. A crawl link is not followed over HTTP.
 
 ## Requirements
 

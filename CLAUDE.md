@@ -73,15 +73,23 @@ src/
 │   ├── LinkHeaderModule.php
 │   ├── LinkHeaderRenderer.php
 │   ├── HtmlLinkAuditor.php
+│   ├── HtmlAffordance.php   # The links and forms of an HTML page, with each form's hidden inputs
 │   └── HtmlTagScanner.php   # Comment-aware tag scanner and attribute tokenizer (internal)
 ├── Http/           # HTTP testing utilities
 │   ├── HttpResource.php
 │   ├── CreateResponse.php
+│   ├── CurlCommand.php      # The curl command a request is logged as, secret header values hidden (internal)
 │   ├── HrefExtractor.php    # Resolves a link rel from HAL, semantic HTML or a Link header
+│   ├── LinkFollower.php     # Follows the links of a `#link=` fragment over HTTP (internal)
+│   ├── MultipartForm.php    # multipart/form-data fields of a query that carries a file (internal)
 │   ├── AbstractWorkflowTest.php
 │   └── Exception/           # HalLinkNotFoundException, HttpRequestException
+├── DeclaredLinks.php        # The links a #[Link] declares and the requests they make (internal)
+├── DeclaredMethodLinker.php # Linker a test binds: follows each link with its declared method
 ├── DevInvoker.php  # Development-specific resource invoker
+├── LocationFollower.php     # Follows the Location of a 303 or 201, in process and over HTTP (internal)
 ├── QueryMerger.php # Query parameter handling
+├── Types.php       # Psalm type aliases
 └── Uri.php         # URI utilities
 
 src-deprecated/     # Legacy components for backward compatibility

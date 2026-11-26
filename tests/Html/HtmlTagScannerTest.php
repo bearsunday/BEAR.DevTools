@@ -6,6 +6,8 @@ namespace BEAR\Dev\Html;
 
 use PHPUnit\Framework\TestCase;
 
+use function array_column;
+
 final class HtmlTagScannerTest extends TestCase
 {
     public function testAttributesAreTokenized(): void
@@ -61,5 +63,24 @@ final class HtmlTagScannerTest extends TestCase
         $this->assertSame([], HtmlTagScanner::scan('<abbr href="/x"></abbr><a-b href="/y"></a-b>', ['a']));
         $this->assertSame([['tag' => 'a', 'attrs' => []]], HtmlTagScanner::scan('<a>', ['a']));
         $this->assertSame([['tag' => 'link', 'attrs' => ['href' => '/n']]], HtmlTagScanner::scan('<link href="/n"/>', ['link']));
+    }
+
+    public function testEndTagIsReturnedWhenAskedFor(): void
+    {
+        $tags = HtmlTagScanner::scan('<form action="/x"><input name="a"></form><input name="b"></div>', ['form', '/form', 'input']);
+
+        $this->assertSame(['form', 'input', '/form', 'input'], array_column($tags, 'tag'));
+    }
+
+    public function testOnlyEndTagsCanBeAskedFor(): void
+    {
+        $this->assertSame([['tag' => '/form', 'attrs' => []]], HtmlTagScanner::scan('<form action="/x"></form>', ['/form']));
+    }
+
+    public function testEndTagWithAttributesIsAnEndTag(): void
+    {
+        $tags = HtmlTagScanner::scan('<form action="/x"></form x><input name="b">', ['form', '/form', 'input']);
+
+        $this->assertSame(['form', '/form', 'input'], array_column($tags, 'tag'));
     }
 }

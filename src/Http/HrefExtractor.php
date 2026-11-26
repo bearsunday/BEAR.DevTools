@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Http;
 
+use BEAR\Dev\Html\HtmlAffordance;
 use BEAR\Dev\Html\HtmlTagScanner;
+use BEAR\Dev\Html\LinkHeader;
 use BEAR\Resource\ResourceObject;
 use stdClass;
 
@@ -23,14 +25,37 @@ use const ENT_QUOTES;
 
 final class HrefExtractor
 {
+    /** The rel's href from HAL `_links`, then an HTML `<a>`, `<area>` or `<link>`, then the `Link` header */
     public function href(string $rel, ResourceObject $ro): string|null
     {
-        return $this->halHref($rel, $ro)
-            ?? $this->semanticHtmlHref($rel, $ro->view)
-            ?? $this->linkHeaderHref($rel, $ro->headers);
+        return $this->halLink($rel, $ro)->href
+            ?? $this->anchorHref($rel, $ro->view)
+            ?? $this->linkHeaderLink($rel, $ro->headers)?->href;
     }
 
-    private function halHref(string $rel, ResourceObject $ro): string|null
+    /** The rel's link and the method it declares, from HAL `_links`, then the HTML links and forms, then the `Link` header */
+    public function link(string $rel, ResourceObject $ro): LinkHeader|null
+    {
+        return $this->halLink($rel, $ro)
+            ?? $this->semanticHtmlLink($rel, $ro->view)
+            ?? $this->linkHeaderLink($rel, $ro->headers);
+    }
+
+    /**
+     * The hidden inputs of the form the rel's link is read from; none for a link read from elsewhere
+     *
+     * @return array<string, mixed>
+     */
+    public function hidden(string $rel, ResourceObject $ro): array
+    {
+        if ($this->halLink($rel, $ro) !== null) {
+            return [];
+        }
+
+        return $this->htmlAffordance($rel, $ro->view)->hidden ?? [];
+    }
+
+    private function halLink(string $rel, ResourceObject $ro): LinkHeader|null
     {
         $body = is_array($ro->body) ? $ro->body : [];
         $links = $body['_links'] ?? null;
@@ -52,23 +77,27 @@ final class HrefExtractor
         }
 
         $href = $link['href'] ?? null;
+        $method = $link['method'] ?? null;
 
-        return is_string($href) ? $href : null;
+        return is_string($href) ? new LinkHeader($rel, $href, is_string($method) ? $method : 'get') : null;
     }
 
-    private function semanticHtmlHref(string $rel, string|null $view): string|null
+    private function semanticHtmlLink(string $rel, string|null $view): LinkHeader|null
+    {
+        $affordance = $this->htmlAffordance($rel, $view);
+
+        return $affordance === null ? null : new LinkHeader($rel, $affordance->href, $affordance->method);
+    }
+
+    private function anchorHref(string $rel, string|null $view): string|null
     {
         if (! is_string($view) || $view === '') {
             return null;
         }
 
         foreach (HtmlTagScanner::scan($view, ['a', 'area', 'link']) as ['attrs' => $attrs]) {
-            if (! $this->hasLinkToken($attrs, $rel)) {
-                continue;
-            }
-
-            $href = $attrs['href'] ?? null;
-            if ($href !== null && $href !== '') {
+            $href = $attrs['href'] ?? '';
+            if ($href !== '' && ($this->containsToken($attrs['rel'] ?? '', $rel) || $this->containsToken($attrs['class'] ?? '', $rel))) {
                 return $href;
             }
         }
@@ -76,8 +105,23 @@ final class HrefExtractor
         return null;
     }
 
+    private function htmlAffordance(string $rel, string|null $view): HtmlAffordance|null
+    {
+        if (! is_string($view) || $view === '') {
+            return null;
+        }
+
+        foreach (HtmlAffordance::listFromHtml($view) as $affordance) {
+            if ($affordance->hasToken($rel)) {
+                return $affordance;
+            }
+        }
+
+        return null;
+    }
+
     /** @param array<string, mixed> $headers */
-    private function linkHeaderHref(string $rel, array $headers): string|null
+    private function linkHeaderLink(string $rel, array $headers): LinkHeader|null
     {
         $header = $this->headerValue($headers, 'Link');
         if ($header === null) {
@@ -99,17 +143,10 @@ final class HrefExtractor
                 continue;
             }
 
-            return html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5);
+            return new LinkHeader($rel, html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5), $this->linkHeaderParam($match[2], 'method') ?? 'get');
         }
 
         return null;
-    }
-
-    /** @param array<string, string> $attrs */
-    private function hasLinkToken(array $attrs, string $rel): bool
-    {
-        return $this->containsToken($attrs['rel'] ?? '', $rel)
-            || $this->containsToken($attrs['class'] ?? '', $rel);
     }
 
     private function linkHeaderParam(string $attrs, string $name): string|null

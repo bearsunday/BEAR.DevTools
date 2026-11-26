@@ -25,7 +25,7 @@ final readonly class HtmlLinkAuditor
             return;
         }
 
-        $affordances = $this->affordances($html);
+        $affordances = HtmlAffordance::listFromHtml($html);
         foreach ($links as $link) {
             $this->auditLink($link, $affordances);
         }
@@ -36,7 +36,7 @@ final readonly class HtmlLinkAuditor
     {
         $targetMatches = [];
         foreach ($affordances as $affordance) {
-            if ($affordance->href !== $link->href) {
+            if ($affordance->target() !== $link->href) {
                 continue;
             }
 
@@ -50,7 +50,8 @@ final readonly class HtmlLinkAuditor
         }
 
         $methodMatches = [];
-        $method = strtolower($link->method);
+        // HTML has no PUT or DELETE: a link that is not a GET is a POST form
+        $method = strtolower($link->method) === 'get' ? 'get' : 'post';
         foreach ($targetMatches as $affordance) {
             if ($affordance->method !== $method) {
                 continue;
@@ -65,39 +66,24 @@ final readonly class HtmlLinkAuditor
             return;
         }
 
-        foreach ($methodMatches as $affordance) {
-            if ($affordance->hasToken($link->rel)) {
-                return;
-            }
-        }
-
-        $this->logger->warning($link, 'semantic-token-missing');
+        $this->auditToken($link, $methodMatches);
     }
 
-    /** @return list<HtmlAffordance> */
-    private function affordances(string $html): array
+    /** @param non-empty-list<HtmlAffordance> $methodMatches */
+    private function auditToken(LinkHeader $link, array $methodMatches): void
     {
-        $affordances = [];
-        foreach (HtmlTagScanner::scan($html, ['a', 'area', 'link', 'form']) as ['tag' => $tag, 'attrs' => $attrs]) {
-            $href = $tag === 'form' ? $attrs['action'] ?? null : $attrs['href'] ?? null;
-            if ($href === null || $href === '') {
+        foreach ($methodMatches as $affordance) {
+            if (! $affordance->hasToken($link->rel)) {
                 continue;
             }
 
-            // A form's missing or empty method attribute means GET.
-            $method = $tag === 'form' ? strtolower($attrs['method'] ?? '') : '';
-            if ($method === '') {
-                $method = 'get';
+            if ($affordance->overridesMethod()) {
+                $this->logger->warning($link, 'method-override');
             }
 
-            $affordances[] = new HtmlAffordance(
-                $href,
-                $method,
-                $attrs['rel'] ?? '',
-                $attrs['class'] ?? '',
-            );
+            return;
         }
 
-        return $affordances;
+        $this->logger->warning($link, 'semantic-token-missing');
     }
 }

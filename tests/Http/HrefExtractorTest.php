@@ -79,6 +79,55 @@ final class HrefExtractorTest extends TestCase
         $this->assertSame('/next"x', (new HrefExtractor())->href('goNext', $this->ro('<a href=/next"x class=goNext>N</a>')));
     }
 
+    public function testHalLinkCarriesItsMethod(): void
+    {
+        $ro = $this->ro('');
+        $ro->body = ['_links' => ['doCreate' => ['href' => '/item', 'method' => 'post']]];
+        $link = (new HrefExtractor())->link('doCreate', $ro);
+
+        $this->assertSame(['/item', 'post'], [$link?->href, $link?->method]);
+    }
+
+    public function testLinkHeaderCarriesItsMethod(): void
+    {
+        $ro = $this->ro('<p>no link</p>');
+        $ro->headers = ['Link' => '</next>; rel="goNext", </item>; rel="doCreate"; method="post"'];
+        $link = (new HrefExtractor())->link('doCreate', $ro);
+
+        $this->assertSame(['/item', 'post'], [$link?->href, $link?->method]);
+    }
+
+    public function testHtmlFormIsReadBeforeLinkHeader(): void
+    {
+        $ro = $this->ro('<form class="doCreate" method="post" action="/item"><input name="name"></form>');
+        $ro->headers = ['Link' => '</header>; rel="doCreate"'];
+        $link = (new HrefExtractor())->link('doCreate', $ro);
+
+        $this->assertSame(['/item', 'post'], [$link?->href, $link?->method]);
+    }
+
+    public function testHrefSkipsTheFormThatLinkReads(): void
+    {
+        $ro = $this->ro('<form rel="doCheckout" method="post" action="/shopping/checkout?mode=complete"></form>');
+        $ro->headers = ['Link' => '</shopping/checkout>; rel="doCheckout"; method="post"'];
+        $extractor = new HrefExtractor();
+
+        $this->assertSame('/shopping/checkout', $extractor->href('doCheckout', $ro));
+        $this->assertSame('/shopping/checkout?mode=complete', $extractor->link('doCheckout', $ro)?->href);
+    }
+
+    public function testHiddenInputsAreThoseOfTheFormTheLinkIsReadFrom(): void
+    {
+        $ro = $this->ro(
+            '<form class="doCreate" method="post" action="/item">'
+            . '<input type="hidden" name="csrfToken" value="t1"><input type="text" name="title" value="typed">'
+            . '<input type="hidden" name="off" value="x" disabled>'
+            . '</form><input type="hidden" name="outside" value="x">',
+        );
+
+        $this->assertSame(['csrfToken' => 't1'], (new HrefExtractor())->hidden('doCreate', $ro));
+    }
+
     private function ro(string $view): NullResourceObject
     {
         $ro = new NullResourceObject();

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0.html),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `DeclaredMethodLinker`, bound for `LinkerInterface` in a test, follows the links of a request with the method each `#[Link]` declares, and the `Location` of a 303 or a 201 with GET; the resource client itself follows every link with GET.
+- `HttpResource` follows the links of a `#link=` fragment, which HTTP does not send, as `DeclaredMethodLinker` does in process, with the method the representation gives each rel; a workflow test written with `#link=` runs unchanged over HTTP. A link read from an HTML `<form>` is sent with the form's hidden inputs, nested as PHP reads `tags[]` or `user[name]`, and a POST that carries `_method` throws `LinkException`.
+- `HrefExtractor::link()` returns a rel's href and method from HAL `_links`, an HTML `<a>`, `<area>`, `<link>` or `<form>`, or the `Link` header.
+- `HtmlAffordance::listFromHtml()` reads the links and forms of an HTML page as `HtmlLinkAuditor` does, with the hidden inputs of each form, which `HrefExtractor::hidden()` returns for a rel.
+- `HttpResource` takes headers to send with every request as its fourth constructor argument, and hides the value of a header whose name names a credential (`Authorization`, `Cookie`, `X-Api-Key`, `X-CSRF-Token` and the like) in the logged curl command. A POST whose query carries a `Koriym\FileUpload\FileUpload`, also in a list such as `images[0]`, is sent as multipart/form-data; another method that carries one throws `HttpRequestException`, since PHP reads such a body for a POST only.
+
+### Changed
+- Requires bear/resource 1.37 or later.
+- `HttpResource` keeps the cookies the server sets, in a file only the owner can read, and sends them back on the later requests of the same instance.
+- `HttpResource` throws `HttpRequestException` for a URI whose path does not start with a single `/`.
+- `HttpResource` throws `UriException` for a URI fragment other than `#link=`, as bear/resource does; `href()` drops the fragment of the href it follows.
+- `HtmlLinkAuditor` expects a `#[Link]` that is not a GET to be a POST form, reads a form `method` other than `post` as GET as a browser does, and reports a POST form that carries `_method`, as a hidden input or in the query of its action, as `method-override`.
+
 ## [1.5.0] - 2026-11-11
 
 ### Fixed
