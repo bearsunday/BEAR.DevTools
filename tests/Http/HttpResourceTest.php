@@ -8,6 +8,7 @@ use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
 use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Resource\NullResourceObject;
 use BEAR\Resource\Uri;
+use Koriym\FileUpload\FileUpload;
 use PHPUnit\Framework\TestCase;
 
 use function assert;
@@ -20,6 +21,7 @@ use function unlink;
 class HttpResourceTest extends TestCase
 {
     private const HAL_HOST = '127.0.0.1:18081';
+    private const ECHO_HOST = '127.0.0.1:18483';
 
     /** @var HttpResource $resource */
     private $resource;
@@ -252,5 +254,27 @@ class HttpResourceTest extends TestCase
 
         $this->assertFileExists($log);
         $this->assertStringContainsString('curl -s -i http://127.0.0.1:1/', (string) file_get_contents($log));
+    }
+
+    public function testHeadersAreSentWithEveryRequest(): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log', ['X-Story' => 'told']);
+
+        $this->assertSame('told', $resource->get('/')->body['story']);
+        $this->assertSame('told', $resource->post('/', ['title' => 'story'])->body['story']);
+    }
+
+    public function testQueryWithFileIsSentAsMultipartForm(): void
+    {
+        $resource = new HttpResource(self::ECHO_HOST, dirname(__DIR__) . '/Fake/request-echo.php', __DIR__ . '/log');
+        $ro = $resource->post('/', [
+            'title' => 'story',
+            'tags' => ['a', 'b'],
+            'file' => FileUpload::fromFile(dirname(__DIR__) . '/Fake/upload.txt'),
+        ]);
+
+        $this->assertSame('POST', $ro->body['method']);
+        $this->assertStringContainsString('"post":{"title":"story","tags":["a","b"]}', (string) $ro->view);
+        $this->assertStringContainsString('"files":{"file":{"name":"upload.txt","type":"text\/plain","size":5}}', (string) $ro->view);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Html\HtmlAffordance;
+use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
 use BEAR\Dev\QueryMerger;
 use BEAR\Resource\Code;
 use BEAR\Resource\Exception\LinkException;
@@ -15,6 +16,7 @@ use Closure;
 use LogicException;
 
 use function array_merge;
+use function explode;
 use function is_array;
 use function preg_match;
 use function sprintf;
@@ -76,6 +78,27 @@ final class LinkFollower
         }
 
         return $current;
+    }
+
+    /**
+     * The href of a rel of a response, without the fragment, which names a part of the page HTTP does not request
+     *
+     * @throws HalLinkNotFoundException
+     */
+    public function href(string $rel, ResourceObject|null $ro): string
+    {
+        if (! $ro instanceof ResourceObject) {
+            throw new HalLinkNotFoundException('A source ResourceObject is required to follow a link.');
+        }
+
+        $href = $this->hrefExtractor->href($rel, $ro);
+        if ($href === null) {
+            throw new HalLinkNotFoundException(sprintf('Link rel `%s` is not available.', $rel));
+        }
+
+        [$requestUri] = explode('#', $href, 2);
+
+        return $requestUri;
     }
 
     /**

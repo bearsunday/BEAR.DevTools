@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Http;
 
-use BEAR\Dev\Http\Exception\HalLinkNotFoundException;
 use BEAR\Dev\Http\Exception\HttpRequestException;
 use BEAR\Dev\QueryMerger;
+use BEAR\Dev\Types;
 use BEAR\Resource\RequestInterface;
 use BEAR\Resource\ResourceInterface;
 use BEAR\Resource\ResourceObject;
@@ -15,6 +15,8 @@ use Koriym\PhpServer\PhpServer;
 use LogicException;
 use Override;
 
+use function array_keys;
+use function array_map;
 use function bin2hex;
 use function curl_error;
 use function curl_exec;
@@ -28,6 +30,7 @@ use function file_put_contents;
 use function http_build_query;
 use function implode;
 use function in_array;
+use function is_array;
 use function is_file;
 use function is_string;
 use function json_encode;
@@ -57,6 +60,7 @@ use const FILE_APPEND;
 use const JSON_THROW_ON_ERROR;
 use const PHP_EOL;
 
+/** @psalm-import-type MultipartFields from Types */
 final class HttpResource implements ResourceInterface
 {
     private const CONNECT_TIMEOUT = 10;
@@ -71,6 +75,13 @@ final class HttpResource implements ResourceInterface
     private readonly CreateResponse $createResponse;
     private readonly HrefExtractor $hrefExtractor;
     private readonly LinkFollower $linkFollower;
+    private readonly MultipartForm $multipartForm;
+
+    /** @var list<string> The headers sent with every request, as `name: value` */
+    private readonly array $headerLines;
+
+    /** The `-H` arguments of those headers in the logged curl command */
+    private readonly string $headerArgs;
 
     /**
      * The cookies the server sets, sent back on every later request of this instance as a browser does
@@ -79,7 +90,8 @@ final class HttpResource implements ResourceInterface
      */
     private readonly string $cookieJar;
 
-    public function __construct(string $host, string $index, string $logPath = 'php://stderr')
+    /** @param array<string, string> $headers sent with every request, as name => value */
+    public function __construct(string $host, string $index, string $logPath = 'php://stderr', array $headers = [])
     {
         $this->baseUri = sprintf('http://%s', $host);
         $this->logPath = $logPath;
@@ -89,6 +101,9 @@ final class HttpResource implements ResourceInterface
         $this->createResponse = new CreateResponse();
         $this->hrefExtractor = new HrefExtractor();
         $this->linkFollower = new LinkFollower($this->hrefExtractor, $this->queryMerger);
+        $this->multipartForm = new MultipartForm();
+        $this->headerLines = array_map(static fn (string $name, string $value): string => $name . ': ' . $value, array_keys($headers), $headers);
+        $this->headerArgs = implode('', array_map(static fn (string $line): string => ' -H ' . escapeshellarg($line), $this->headerLines));
         $this->cookieJar = sys_get_temp_dir() . '/bear-dev-http-cookie-' . bin2hex(random_bytes(8));
     }
 
@@ -152,19 +167,7 @@ final class HttpResource implements ResourceInterface
     #[Override]
     public function href(string $rel, array $query = [], ResourceObject|null $ro = null): ResourceObject
     {
-        if (! $ro instanceof ResourceObject) {
-            throw new HalLinkNotFoundException('A source ResourceObject is required to follow a link.');
-        }
-
-        $href = $this->hrefExtractor->href($rel, $ro);
-        if ($href === null) {
-            throw new HalLinkNotFoundException(sprintf('Link rel `%s` is not available.', $rel));
-        }
-
-        // A fragment such as #comments names a part of the page, which HTTP does not request
-        [$requestUri] = explode('#', $href, 2);
-
-        return $this->get($requestUri, $query);
+        return $this->get($this->linkFollower->href($rel, $ro), $query);
     }
 
     /** @param array<string, mixed> $query */
@@ -260,13 +263,21 @@ final class HttpResource implements ResourceInterface
             $queryParameter = $uri->query ? '?' . http_build_query($uri->query) : '';
             $url = sprintf('%s%s%s', $this->baseUri, $uri->path, $queryParameter);
 
-            return $this->request($url, 'get', sprintf('curl -s -i %s', self::shellArg($url)));
+            return $this->request($url, 'get', sprintf('curl -s -i%s %s', $this->headerArgs, self::shellArg($url)));
+        }
+
+        $url = sprintf('%s%s', $this->baseUri, $uri->path);
+        $fields = $this->multipartForm->fields($uri->query);
+        if ($fields !== null) {
+            $curlCommand = sprintf('curl -s -i%s -X %s%s %s', $this->headerArgs, escapeshellarg($method), $this->multipartForm->curlArgs($fields), self::shellArg($url));
+
+            return $this->request($url, $method, $curlCommand, $fields);
         }
 
         $json = json_encode($uri->query, JSON_THROW_ON_ERROR);
-        $url = sprintf('%s%s', $this->baseUri, $uri->path);
         $curlCommand = sprintf(
-            'curl -s -i -H %s -X %s -d %s %s',
+            'curl -s -i%s -H %s -X %s -d %s %s',
+            $this->headerArgs,
             escapeshellarg('Content-Type:application/json'),
             escapeshellarg($method),
             self::shellArg($json),
@@ -348,7 +359,8 @@ final class HttpResource implements ResourceInterface
         $reset[] = $logFile;
     }
 
-    public function request(string $url, string $method, string $curlCommand, string|null $body = null): ResourceObject
+    /** @param string|MultipartFields|null $body a JSON body, or multipart/form-data fields */
+    public function request(string $url, string $method, string $curlCommand, string|array|null $body = null): ResourceObject
     {
         try {
             $output = $this->executeCurl($url, $method, $body);
@@ -369,9 +381,11 @@ final class HttpResource implements ResourceInterface
     /**
      * Execute HTTP request using PHP's native cURL extension
      *
+     * @param string|MultipartFields|null $body
+     *
      * @return array<string>
      */
-    private function executeCurl(string $url, string $method, string|null $body = null): array
+    private function executeCurl(string $url, string $method, string|array|null $body = null): array
     {
         $ch = curl_init($url);
         if ($ch === false) {
@@ -391,10 +405,14 @@ final class HttpResource implements ResourceInterface
         }
 
         // An empty "Expect:" stops cURL from waiting for "100 Continue" on large bodies.
-        $headers = ['Expect:'];
+        $headers = ['Expect:', ...$this->headerLines];
+
         if ($body !== null) {
+            // cURL sends an array as multipart/form-data with its own Content-Type
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-            $headers[] = 'Content-Type:application/json';
+            if (! is_array($body)) {
+                $headers[] = 'Content-Type:application/json';
+            }
         }
 
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);

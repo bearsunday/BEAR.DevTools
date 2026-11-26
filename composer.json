@@ -13,6 +13,7 @@
         "ext-curl": "*",
         "bear/app-meta": "^1.8",
         "bear/resource": "^1.37",
+        "koriym/file-upload": "^1.0.1",
         "koriym/php-server": "^1.0",
         "ray/aop": "^2.18.0",
         "ray/di": "^2.18.0"

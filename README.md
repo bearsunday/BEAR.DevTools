@@ -69,6 +69,15 @@ assert($ro->code === 200);
 
 $ro = $resource->post('/users', ['name' => 'John', 'email' => 'john@example.com']);
 assert($ro->code === 201);
+
+// A query that carries a Koriym\FileUpload\FileUpload is sent as multipart/form-data
+$ro = $resource->post('/avatar', ['image' => FileUpload::fromFile(__DIR__ . '/avatar.png')]);
+```
+
+The fourth argument holds headers sent with every request:
+
+```php
+$resource = new HttpResource('127.0.0.1:8080', '/path/to/public/index.php', __DIR__ . '/log', ['Sec-Fetch-Site' => 'same-origin']);
 ```
 
 #### Following HAL links
