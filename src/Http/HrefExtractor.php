@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BEAR\Dev\Http;
 
 use BEAR\Dev\Html\HtmlAffordance;
+use BEAR\Dev\Html\HtmlTagScanner;
 use BEAR\Dev\Html\LinkHeader;
 use BEAR\Resource\ResourceObject;
 use stdClass;
@@ -24,12 +25,15 @@ use const ENT_QUOTES;
 
 final class HrefExtractor
 {
+    /** The rel's href from HAL `_links`, then an HTML `<a>`, `<area>` or `<link>`, then the `Link` header */
     public function href(string $rel, ResourceObject $ro): string|null
     {
-        return $this->link($rel, $ro)?->href;
+        return $this->halLink($rel, $ro)->href
+            ?? $this->anchorHref($rel, $ro->view)
+            ?? $this->linkHeaderLink($rel, $ro->headers)?->href;
     }
 
-    /** The rel's link and the method it declares, from HAL `_links`, then the HTML, then the `Link` header */
+    /** The rel's link and the method it declares, from HAL `_links`, then the HTML links and forms, then the `Link` header */
     public function link(string $rel, ResourceObject $ro): LinkHeader|null
     {
         return $this->halLink($rel, $ro)
@@ -83,6 +87,22 @@ final class HrefExtractor
         $affordance = $this->htmlAffordance($rel, $view);
 
         return $affordance === null ? null : new LinkHeader($rel, $affordance->href, $affordance->method);
+    }
+
+    private function anchorHref(string $rel, string|null $view): string|null
+    {
+        if (! is_string($view) || $view === '') {
+            return null;
+        }
+
+        foreach (HtmlTagScanner::scan($view, ['a', 'area', 'link']) as ['attrs' => $attrs]) {
+            $href = $attrs['href'] ?? '';
+            if ($href !== '' && ($this->containsToken($attrs['rel'] ?? '', $rel) || $this->containsToken($attrs['class'] ?? '', $rel))) {
+                return $href;
+            }
+        }
+
+        return null;
     }
 
     private function htmlAffordance(string $rel, string|null $view): HtmlAffordance|null

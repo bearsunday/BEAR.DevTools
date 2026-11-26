@@ -17,7 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Requires bear/resource 1.37 or later.
 - `HttpResource` keeps the cookies the server sets and sends them back on the later requests of the same instance.
 - `HttpResource` throws `UriException` for a URI fragment other than `#link=`, as bear/resource does; `href()` drops the fragment of the href it follows.
-- `HrefExtractor::href()` also finds a rel on an HTML `<form>` and returns its action.
 - `HtmlLinkAuditor` expects a `#[Link]` that is not a GET to be a POST form, reads a form `method` other than `post` as GET as a browser does, and reports a POST form that carries `_method`, as a hidden input or in the query of its action, as `method-override`.
 
 ## [1.5.0] - 2026-11-11
