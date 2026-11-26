@@ -19,6 +19,8 @@ use function file_get_contents;
 use function str_repeat;
 use function unlink;
 
+use const UPLOAD_ERR_NO_FILE;
+
 class HttpResourceTest extends TestCase
 {
     private const HAL_HOST = '127.0.0.1:18081';
