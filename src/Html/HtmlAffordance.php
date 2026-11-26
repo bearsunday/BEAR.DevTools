@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace BEAR\Dev\Html;
 
+use function array_map;
 use function count;
 use function explode;
 use function http_build_query;
+use function implode;
 use function in_array;
 use function is_array;
 use function parse_str;
 use function parse_url;
 use function preg_split;
+use function rawurlencode;
 use function strtolower;
 use function trim;
 
@@ -25,7 +28,7 @@ final readonly class HtmlAffordance
     /** The form index of an input outside any form, whose value no affordance sends */
     private const OUTSIDE_FORM = -1;
 
-    /** @param array<string, string> $hidden The hidden inputs of a form, which a browser sends with it */
+    /** @param array<string, mixed> $hidden The hidden inputs of a form, which a browser sends with it, nested as PHP parses `tags[]` or `user[name]` */
     public function __construct(
         public string $href,
         public string $method,
@@ -44,14 +47,14 @@ final readonly class HtmlAffordance
     {
         /** @var list<array{string, string, string, string}> $found */
         $found = [];
-        /** @var array<int, array<string, string>> $hidden */
+        /** @var array<int, list<array{string, string}>> $hidden */
         $hidden = [];
         $form = self::OUTSIDE_FORM;
         foreach (HtmlTagScanner::scan($html, ['a', 'area', 'link', 'form', '/form', 'input']) as ['tag' => $tag, 'attrs' => $attrs]) {
             if ($tag === 'input') {
                 $input = self::hiddenInput($attrs);
                 if ($input !== null) {
-                    $hidden[$form][$input[0]] = $input[1];
+                    $hidden[$form][] = $input;
                 }
 
                 continue;
@@ -71,10 +74,29 @@ final readonly class HtmlAffordance
 
         $affordances = [];
         foreach ($found as $i => [$href, $method, $rel, $class]) {
-            $affordances[] = new self($href, $method, $rel, $class, $hidden[$i] ?? []);
+            $affordances[] = new self($href, $method, $rel, $class, self::formFields($hidden[$i] ?? []));
         }
 
         return $affordances;
+    }
+
+    /**
+     * The fields the inputs submit, in the structure PHP gives a submitted form
+     *
+     * @param list<array{string, string}> $inputs
+     *
+     * @return array<string, mixed>
+     */
+    private static function formFields(array $inputs): array
+    {
+        $pairs = array_map(static fn (array $input): string => rawurlencode($input[0]) . '=' . rawurlencode($input[1]), $inputs);
+        parse_str(implode('&', $pairs), $fields);
+        $named = [];
+        foreach ($fields as $name => $value) {
+            $named[(string) $name] = $value;
+        }
+
+        return $named;
     }
 
     /** The href without the method override in its query: the target a declared link names */

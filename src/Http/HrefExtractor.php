@@ -44,7 +44,7 @@ final class HrefExtractor
     /**
      * The hidden inputs of the form the rel's link is read from; none for a link read from elsewhere
      *
-     * @return array<string, string>
+     * @return array<string, mixed>
      */
     public function hidden(string $rel, ResourceObject $ro): array
     {
