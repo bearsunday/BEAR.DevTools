@@ -1,7 +1,7 @@
 {
     "require": {
         "doctrine/coding-standard": "^13.0",
-        "phpmd/phpmd": "^2.9",
+        "phpmd/phpmd": "^3.0",
         "phpmetrics/phpmetrics": "v3.0.0rc8",
         "phpstan/phpstan": "^2.1",
         "vimeo/psalm": "^6.12"

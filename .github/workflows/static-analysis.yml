@@ -39,7 +39,7 @@ jobs:
         run: composer sa
 
       - name: Run PHP Mess Detector
-        run: ./vendor/bin/phpmd src text ./phpmd.xml
+        run: composer phpmd
 
       - name: Download ComposerRequireChecker PHAR
         run: |
