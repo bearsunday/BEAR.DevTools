@@ -54,6 +54,7 @@ class DevModule extends AbstractModule
 
 ```php
 use BEAR\Dev\Http\HttpResource;
+use Koriym\FileUpload\FileUpload;
 
 // Start the built-in server and create an HTTP client.
 // The third argument is the log destination and is optional

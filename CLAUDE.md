@@ -73,15 +73,19 @@ src/
 │   ├── LinkHeaderModule.php
 │   ├── LinkHeaderRenderer.php
 │   ├── HtmlLinkAuditor.php
+│   ├── HtmlAffordance.php   # The links and forms of an HTML page, with each form's hidden inputs
 │   └── HtmlTagScanner.php   # Comment-aware tag scanner and attribute tokenizer (internal)
 ├── Http/           # HTTP testing utilities
 │   ├── HttpResource.php
 │   ├── CreateResponse.php
 │   ├── HrefExtractor.php    # Resolves a link rel from HAL, semantic HTML or a Link header
+│   ├── LinkFollower.php     # Follows the links of a `#link=` fragment over HTTP (internal)
+│   ├── MultipartForm.php    # multipart/form-data fields of a query that carries a file (internal)
 │   ├── AbstractWorkflowTest.php
 │   └── Exception/           # HalLinkNotFoundException, HttpRequestException
 ├── DevInvoker.php  # Development-specific resource invoker
 ├── QueryMerger.php # Query parameter handling
+├── Types.php       # Psalm type aliases
 └── Uri.php         # URI utilities
 
 src-deprecated/     # Legacy components for backward compatibility
